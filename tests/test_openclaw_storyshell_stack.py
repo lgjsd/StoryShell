@@ -14,6 +14,7 @@ if str(SRC_ROOT) not in sys.path:
 
 from storyshell.openclaw_storyshell_stack import (
     STORY_MAIN_AGENT_ID,
+    StoryShellError,
     _load_openclaw_config,
     build_storyshell_agent_batch,
     sync_storyshell_stack,
@@ -46,6 +47,16 @@ class StoryShellStackTests(unittest.TestCase):
                 }
             }
         }
+
+    def _completed_process(
+        self,
+        *,
+        returncode: int,
+        args: list[str],
+        stdout: str = "",
+        stderr: str = "",
+    ) -> mock.Mock:
+        return mock.Mock(returncode=returncode, args=args, stdout=stdout, stderr=stderr)
 
     def _merged_agents(self, mode: str) -> list[dict[str, object]]:
         batch = build_storyshell_agent_batch(
@@ -205,6 +216,102 @@ class StoryShellStackTests(unittest.TestCase):
             self.assertTrue((home / "workspace-story-main" / "skills" / "story-runtime" / "SKILL.md").exists())
             self.assertTrue((home / "workspace-story-main" / "skills" / "story-state" / "SKILL.md").exists())
             self.assertTrue((home / "workspace-story-main" / "bin" / "storyshell-state").exists())
+
+    @mock.patch("storyshell.openclaw_storyshell_stack.subprocess.run")
+    @mock.patch("storyshell.openclaw_storyshell_stack._load_openclaw_config")
+    def test_sync_apply_config_uses_batch_file_when_supported(
+        self,
+        mock_load_config: mock.Mock,
+        mock_run: mock.Mock,
+    ) -> None:
+        mock_load_config.return_value = self.existing_config
+        with tempfile.TemporaryDirectory() as tmpdir:
+            home = Path(tmpdir)
+            config_path = home / "openclaw.json"
+            config_path.write_text("{}\n", encoding="utf-8")
+            batch_file = home / "tmp" / "storyshell-agent-config.batch.json"
+            batch_command = ["openclaw", "config", "set", "--batch-file", str(batch_file)]
+            mock_run.return_value = self._completed_process(returncode=0, args=batch_command)
+            report = sync_storyshell_stack(openclaw_home=home, dry_run=False, apply_config=True)
+        self.assertTrue(report["configApplied"])
+        self.assertEqual(report["configApplyMode"], "batch-file")
+        self.assertEqual(report["configCommand"], batch_command)
+        self.assertEqual(report["configCommands"], [batch_command])
+        self.assertEqual(mock_run.call_count, 1)
+        self.assertEqual(mock_run.call_args.args[0], batch_command)
+        self.assertEqual(mock_run.call_args.kwargs["env"]["OPENCLAW_CONFIG_PATH"], str(config_path))
+
+    @mock.patch("storyshell.openclaw_storyshell_stack.subprocess.run")
+    @mock.patch("storyshell.openclaw_storyshell_stack._load_openclaw_config")
+    def test_sync_apply_config_falls_back_when_batch_file_unsupported(
+        self,
+        mock_load_config: mock.Mock,
+        mock_run: mock.Mock,
+    ) -> None:
+        mock_load_config.return_value = self.existing_config
+        with tempfile.TemporaryDirectory() as tmpdir:
+            home = Path(tmpdir)
+            config_path = home / "openclaw.json"
+            config_path.write_text("{}\n", encoding="utf-8")
+            batch_file = home / "tmp" / "storyshell-agent-config.batch.json"
+            batch_command = ["openclaw", "config", "set", "--batch-file", str(batch_file)]
+            fallback_command = ["openclaw", "config", "set", "agents.list"]
+
+            def run_side_effect(command: list[str], **kwargs: object) -> mock.Mock:
+                self.assertEqual(kwargs["env"]["OPENCLAW_CONFIG_PATH"], str(config_path))
+                if command == batch_command:
+                    return self._completed_process(
+                        returncode=2,
+                        args=command,
+                        stderr="error: unknown option '--batch-file'",
+                    )
+                self.assertEqual(command[:4], fallback_command)
+                self.assertEqual(command[-1], "--strict-json")
+                json.loads(command[4])
+                return self._completed_process(returncode=0, args=command)
+
+            mock_run.side_effect = run_side_effect
+            report = sync_storyshell_stack(openclaw_home=home, dry_run=False, apply_config=True)
+        self.assertTrue(report["configApplied"])
+        self.assertEqual(report["configApplyMode"], "strict-json-fallback")
+        self.assertEqual(report["configCommands"][0], batch_command)
+        self.assertEqual(report["configCommands"][1][:4], fallback_command)
+        self.assertEqual(report["configCommands"][1][-1], "--strict-json")
+        self.assertEqual(report["configFallbackReason"], "error: unknown option '--batch-file'")
+        self.assertEqual(mock_run.call_count, 2)
+
+    @mock.patch("storyshell.openclaw_storyshell_stack.subprocess.run")
+    @mock.patch("storyshell.openclaw_storyshell_stack._load_openclaw_config")
+    def test_sync_apply_config_raises_when_fallback_write_fails(
+        self,
+        mock_load_config: mock.Mock,
+        mock_run: mock.Mock,
+    ) -> None:
+        mock_load_config.return_value = self.existing_config
+        with tempfile.TemporaryDirectory() as tmpdir:
+            home = Path(tmpdir)
+            (home / "openclaw.json").write_text("{}\n", encoding="utf-8")
+            batch_file = home / "tmp" / "storyshell-agent-config.batch.json"
+            batch_command = ["openclaw", "config", "set", "--batch-file", str(batch_file)]
+
+            def run_side_effect(command: list[str], **_: object) -> mock.Mock:
+                if command == batch_command:
+                    return self._completed_process(
+                        returncode=2,
+                        args=command,
+                        stderr="error: unknown option '--batch-file'",
+                    )
+                return self._completed_process(
+                    returncode=1,
+                    args=command,
+                    stderr="error: config path rejected",
+                )
+
+            mock_run.side_effect = run_side_effect
+            with self.assertRaises(StoryShellError) as exc_info:
+                sync_storyshell_stack(openclaw_home=home, dry_run=False, apply_config=True)
+        self.assertIn("OpenClaw config apply fallback failed", str(exc_info.exception))
+        self.assertIn("agents.list", str(exc_info.exception))
 
 
 if __name__ == "__main__":

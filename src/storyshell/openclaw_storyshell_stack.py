@@ -294,6 +294,85 @@ def _build_skill_targets(*, openclaw_home: Path, use_dedicated_story_main: bool)
     return targets
 
 
+def _config_apply_output(completed: subprocess.CompletedProcess[str]) -> str:
+    return completed.stderr.strip() or completed.stdout.strip() or "no output"
+
+
+def _batch_file_option_unsupported(completed: subprocess.CompletedProcess[str]) -> bool:
+    output = "\n".join(part for part in (completed.stderr, completed.stdout) if part).lower()
+    return "--batch-file" in output and "unknown option" in output
+
+
+def _run_openclaw_config_set(
+    *,
+    command: list[str],
+    config_path: Path,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=_build_openclaw_config_env(config_path=config_path),
+    )
+
+
+def _apply_storyshell_batch_operations(
+    *,
+    batch_operations: list[dict[str, Any]],
+    batch_file: Path,
+    config_path: Path,
+    openclaw_command: str,
+) -> dict[str, Any]:
+    attempted_commands: list[list[str]] = []
+    batch_command = [openclaw_command, "config", "set", "--batch-file", str(batch_file)]
+    attempted_commands.append(batch_command)
+    completed = _run_openclaw_config_set(command=batch_command, config_path=config_path)
+    if completed.returncode == 0:
+        return {
+            "mode": "batch-file",
+            "command": list(completed.args),
+            "commands": attempted_commands,
+            "stdout": completed.stdout,
+            "stderr": completed.stderr,
+        }
+    if not _batch_file_option_unsupported(completed):
+        raise StoryShellError(
+            f"OpenClaw config apply failed with exit code {completed.returncode}: {_config_apply_output(completed)}"
+        )
+
+    last_completed = completed
+    for index, operation in enumerate(batch_operations):
+        operation_mapping = _require_mapping(operation, path=f"batchOperations[{index}]")
+        operation_path = _require_string(operation_mapping.get("path"), path=f"batchOperations[{index}].path")
+        if "value" not in operation_mapping:
+            raise StoryShellError(f"batchOperations[{index}].value is required for config apply fallback.")
+        operation_command = [
+            openclaw_command,
+            "config",
+            "set",
+            operation_path,
+            json.dumps(operation_mapping["value"], sort_keys=True),
+            "--strict-json",
+        ]
+        attempted_commands.append(operation_command)
+        last_completed = _run_openclaw_config_set(command=operation_command, config_path=config_path)
+        if last_completed.returncode != 0:
+            raise StoryShellError(
+                "OpenClaw config apply fallback failed for "
+                f"{operation_path} with exit code {last_completed.returncode}: {_config_apply_output(last_completed)}"
+            )
+
+    return {
+        "mode": "strict-json-fallback",
+        "command": list(last_completed.args),
+        "commands": attempted_commands,
+        "stdout": last_completed.stdout,
+        "stderr": last_completed.stderr,
+        "fallbackReason": _config_apply_output(completed),
+    }
+
+
 def sync_storyshell_stack(
     *,
     openclaw_home: str | Path = "~/.openclaw",
@@ -406,20 +485,19 @@ def sync_storyshell_stack(
     report["writtenWrappers"] = written_wrappers
 
     if apply_config and batch_operations:
-        completed = subprocess.run(
-            [openclaw_command, "config", "set", "--batch-file", str(resolved_batch_file)],
-            capture_output=True,
-            text=True,
-            check=False,
-            env=_build_openclaw_config_env(config_path=config_path),
+        apply_report = _apply_storyshell_batch_operations(
+            batch_operations=batch_operations,
+            batch_file=resolved_batch_file,
+            config_path=config_path,
+            openclaw_command=openclaw_command,
         )
-        report["configCommand"] = completed.args
-        report["configStdout"] = completed.stdout
-        report["configStderr"] = completed.stderr
-        if completed.returncode != 0:
-            raise StoryShellError(
-                f"OpenClaw config apply failed with exit code {completed.returncode}: {completed.stderr.strip() or completed.stdout.strip()}"
-            )
+        report["configApplyMode"] = apply_report["mode"]
+        report["configCommand"] = apply_report["command"]
+        report["configCommands"] = apply_report["commands"]
+        report["configStdout"] = apply_report["stdout"]
+        report["configStderr"] = apply_report["stderr"]
+        if "fallbackReason" in apply_report:
+            report["configFallbackReason"] = apply_report["fallbackReason"]
         report["configApplied"] = True
 
     return report
