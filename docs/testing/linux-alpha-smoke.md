@@ -13,7 +13,7 @@ This smoke test is only meant to prove:
 - Node already installed
 - OpenClaw already installed
 - Python 3 available as `python3`
-- you will use a disposable OpenClaw home, not `~/.openclaw`
+- your default `~/.openclaw` is already initialized, or you have an already initialized alternate OpenClaw home
 
 ## Recommended install mode
 
@@ -26,22 +26,24 @@ Why:
 
 Avoid `replace` unless you are intentionally testing main-agent replacement behavior.
 
-## 1. Prepare a disposable OpenClaw home
+## 1. Choose an initialized OpenClaw home
 
-The StoryShell installer expects an already initialized OpenClaw home with a working `openclaw config` surface.
+The StoryShell installer expects an already initialized OpenClaw home with a working `openclaw config` surface. In the straightforward case, that means your normal default home at `~/.openclaw`.
 
-Use any throwaway OpenClaw home you already initialized for testing, for example:
+If you want isolation, use a copy of an existing initialized OpenClaw home and pass that copy with `--openclaw-home`. A blank `mktemp -d` by itself is not enough.
+
+## 2. Install StoryShell
+
+From the repo root, the simplest path is:
 
 ```bash
-TEST_OPENCLAW_HOME="$(mktemp -d)"
-# Populate this directory with an initialized OpenClaw home before continuing.
+python3 openclaw/scripts/install_storyshell_stack.py \
+  --main-agent-mode add
 ```
 
-If your only initialized home is your personal one, make a copy outside `~/.openclaw` first and point StoryShell at the copy.
+That targets the default initialized OpenClaw home at `~/.openclaw`.
 
-## 2. Install StoryShell into the disposable home
-
-From the repo root:
+If you are deliberately testing against an alternate initialized home, run:
 
 ```bash
 python3 openclaw/scripts/install_storyshell_stack.py \
@@ -49,23 +51,21 @@ python3 openclaw/scripts/install_storyshell_stack.py \
   --main-agent-mode add
 ```
 
-This writes the StoryShell assets into the disposable home and applies the generated OpenClaw config batch there.
-
 ## 3. Inspect the installed assets
 
-The smoke-test install is healthy if these paths exist:
+The smoke-test install is healthy if these paths exist under the OpenClaw home you targeted:
 
-- `$TEST_OPENCLAW_HOME/workspace/skills/story-authoring/SKILL.md`
-- `$TEST_OPENCLAW_HOME/workspace/skills/story-runtime/SKILL.md`
-- `$TEST_OPENCLAW_HOME/workspace/skills/story-state/SKILL.md`
-- `$TEST_OPENCLAW_HOME/workspace/bin/storyshell-validate`
-- `$TEST_OPENCLAW_HOME/workspace-story-main/AGENTS.md`
-- `$TEST_OPENCLAW_HOME/workspace-story-main/skills/story-authoring/SKILL.md`
-- `$TEST_OPENCLAW_HOME/workspace-story-main/skills/story-runtime/SKILL.md`
-- `$TEST_OPENCLAW_HOME/workspace-story-main/skills/story-state/SKILL.md`
-- `$TEST_OPENCLAW_HOME/workspace-story-main/bin/storyshell-manifest`
-- `$TEST_OPENCLAW_HOME/storyshell-manifest.json`
-- `$TEST_OPENCLAW_HOME/tmp/storyshell-agent-config.batch.json`
+- `<openclaw-home>/workspace/skills/story-authoring/SKILL.md`
+- `<openclaw-home>/workspace/skills/story-runtime/SKILL.md`
+- `<openclaw-home>/workspace/skills/story-state/SKILL.md`
+- `<openclaw-home>/workspace/bin/storyshell-validate`
+- `<openclaw-home>/workspace-story-main/AGENTS.md`
+- `<openclaw-home>/workspace-story-main/skills/story-authoring/SKILL.md`
+- `<openclaw-home>/workspace-story-main/skills/story-runtime/SKILL.md`
+- `<openclaw-home>/workspace-story-main/skills/story-state/SKILL.md`
+- `<openclaw-home>/workspace-story-main/bin/storyshell-manifest`
+- `<openclaw-home>/storyshell-manifest.json`
+- `<openclaw-home>/tmp/storyshell-agent-config.batch.json`
 
 ## 4. Validate the sample package
 

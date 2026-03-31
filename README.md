@@ -41,17 +41,15 @@ Assumptions:
 - OpenClaw is already installed
 - Node is already installed
 - Python 3 is available as `python3`
-- your OpenClaw home already has whatever provider/model setup you intend to use
-- you will test against a **disposable OpenClaw home**, not your real one
+- your default OpenClaw home at `~/.openclaw` is already initialized and has whatever provider/model setup you intend to use
 
-Clone the repo and install StoryShell into a disposable OpenClaw home:
+Clone the repo and install StoryShell into your existing initialized OpenClaw home (the default is `~/.openclaw`):
 
 ```bash
 git clone <repo-url>
 cd StoryShell
 
 python3 openclaw/scripts/install_storyshell_stack.py \
-  --openclaw-home "$TEST_OPENCLAW_HOME" \
   --main-agent-mode add
 ```
 
@@ -63,13 +61,15 @@ python3 scripts/validate_storyshell_package.py examples/alpha-smoke-package --js
 
 If the current scaffold is behaving, the validator should resolve the sample story under `stories/lantern-cellar/` and report `valid: true`.
 
+If you want to test against a different OpenClaw home, pass `--openclaw-home`, but it must point to an **already initialized** OpenClaw home with `openclaw.json`; a blank temp directory is not enough.
+
 For the fuller smoke-test checklist, see:
 - `docs/testing/linux-alpha-smoke.md`
 
 ## How to start testing
 
 The current practical way to start is:
-1. install StoryShell into a disposable OpenClaw home
+1. install StoryShell into your existing initialized OpenClaw home
 2. use `add` mode so your normal main agent stays untouched
 3. verify the installed StoryShell assets exist
 4. validate the included sample package
