@@ -1,0 +1,12 @@
+{
+  "id": "story-director",
+  "workspace": "__OPENCLAW_HOME__/workspace-story-director",
+  "model": "openai-codex/gpt-5.4-mini",
+  "thinkingDefault": "low",
+  "tools": {
+    "allow": [
+      "read",
+      "exec"
+    ]
+  }
+}

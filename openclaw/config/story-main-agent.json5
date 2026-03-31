@@ -1,0 +1,24 @@
+{
+  "id": "story-main",
+  "workspace": "__OPENCLAW_HOME__/workspace-story-main",
+  "model": "openai-codex/gpt-5.4-mini",
+  "thinkingDefault": "low",
+  "tools": {
+    "allow": [
+      "read",
+      "write",
+      "edit",
+      "exec",
+      "sessions_spawn",
+      "sessions_send",
+      "sessions_history"
+    ]
+  },
+  "subagents": {
+    "allowAgents": [
+      "story-main",
+      "story-author",
+      "story-director"
+    ]
+  }
+}
