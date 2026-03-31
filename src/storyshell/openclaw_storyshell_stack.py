@@ -18,6 +18,7 @@ STORY_MAIN_AGENT_ID = "story-main"
 STORYSHELL_MANIFEST_VERSION = "storyshell_bootstrap_v0"
 OPENCLAW_HOME_PLACEHOLDER = "__OPENCLAW_HOME__"
 VALID_MAIN_AGENT_MODES = {"preserve", "add", "replace"}
+PRESERVED_AGENT_CHOICE_FIELDS = ("provider", "model", "thinkingDefault")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OPENCLAW_ASSETS_ROOT = REPO_ROOT / "openclaw"
@@ -124,7 +125,7 @@ def _load_openclaw_config(config_path: Path, *, openclaw_command: str) -> dict[s
             f"OpenClaw config not found at {config_path}. Run OpenClaw onboarding before installing StoryShell."
         )
     completed = subprocess.run(
-        [openclaw_command, "config", "get", "agents.list", "--json"],
+        [openclaw_command, "config", "get", "agents", "--json"],
         capture_output=True,
         text=True,
         check=False,
@@ -137,10 +138,10 @@ def _load_openclaw_config(config_path: Path, *, openclaw_command: str) -> dict[s
             f"{completed.stderr.strip() or completed.stdout.strip()}"
         )
     try:
-        agents_list = json.loads(completed.stdout)
+        agents = json.loads(completed.stdout)
     except json.JSONDecodeError as exc:
         raise StoryShellError(f"OpenClaw config read returned invalid JSON for {config_path}: {exc}") from exc
-    return {"agents": {"list": agents_list}}
+    return {"agents": _require_mapping(agents, path="openclawConfig.agents")}
 
 
 def _find_main_agent_index(agents_list: list[dict[str, Any]]) -> int:
@@ -161,6 +162,33 @@ def _upsert_agent(agent_list: list[dict[str, Any]], agent: dict[str, Any]) -> No
     agent_list.append(dict(agent))
 
 
+def _preserve_agent_choice_fields(source: Mapping[str, Any], target: dict[str, Any]) -> dict[str, Any]:
+    for field_name in PRESERVED_AGENT_CHOICE_FIELDS:
+        if field_name in source:
+            target[field_name] = source[field_name]
+    return target
+
+
+def _synthesize_implicit_main_agent(agents: Mapping[str, Any]) -> dict[str, Any]:
+    defaults = _require_mapping(agents.get("defaults"), path="openclawConfig.agents.defaults")
+    implicit_main = {
+        "id": "main",
+        "default": True,
+        "workspace": _require_string(defaults.get("workspace"), path="openclawConfig.agents.defaults.workspace"),
+    }
+    return _preserve_agent_choice_fields(defaults, implicit_main)
+
+
+def _load_agents_for_merge(agents: Mapping[str, Any]) -> tuple[list[dict[str, Any]], bool]:
+    existing_list_raw = agents.get("list")
+    if existing_list_raw is None:
+        return [_synthesize_implicit_main_agent(agents)], False
+    if not isinstance(existing_list_raw, list) or not existing_list_raw:
+        raise StoryShellError("openclawConfig.agents.list must be a non-empty array.")
+    merged_agents = [_require_mapping(entry, path=f"openclawConfig.agents.list[{index}]") for index, entry in enumerate(existing_list_raw)]
+    return merged_agents, True
+
+
 def build_storyshell_agent_batch(
     *,
     existing_config: Mapping[str, Any],
@@ -175,17 +203,15 @@ def build_storyshell_agent_batch(
 
     config = _require_mapping(existing_config, path="openclawConfig")
     agents = _require_mapping(config.get("agents"), path="openclawConfig.agents")
-    existing_list_raw = agents.get("list")
-    if not isinstance(existing_list_raw, list) or not existing_list_raw:
-        raise StoryShellError("openclawConfig.agents.list must be a non-empty array.")
-
-    merged_agents = [_require_mapping(entry, path=f"openclawConfig.agents.list[{index}]") for index, entry in enumerate(existing_list_raw)]
+    merged_agents, has_explicit_agents_list = _load_agents_for_merge(agents)
     main_index = _find_main_agent_index(merged_agents)
     main_entry = dict(merged_agents[main_index])
     main_id = _require_string(main_entry.get("id") or "main", path="openclawConfig.mainAgent.id")
 
     if main_agent_mode == "preserve":
         merged_agents[main_index] = main_entry
+        if not has_explicit_agents_list:
+            return []
     elif main_agent_mode == "add":
         story_main = load_agent_snippet(STORY_MAIN_AGENT_ID, openclaw_home=openclaw_home)
         story_main["id"] = story_main_id
@@ -196,6 +222,7 @@ def build_storyshell_agent_batch(
         replacement["id"] = main_id
         if "default" in main_entry:
             replacement["default"] = main_entry["default"]
+        replacement = _preserve_agent_choice_fields(main_entry, replacement)
         merged_agents[main_index] = replacement
 
     return [{"path": "agents.list", "value": merged_agents}]
@@ -378,7 +405,7 @@ def sync_storyshell_stack(
     report["copiedWorkspaceFiles"] = copied_workspaces
     report["writtenWrappers"] = written_wrappers
 
-    if apply_config:
+    if apply_config and batch_operations:
         completed = subprocess.run(
             [openclaw_command, "config", "set", "--batch-file", str(resolved_batch_file)],
             capture_output=True,

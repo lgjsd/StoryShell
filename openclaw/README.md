@@ -53,9 +53,12 @@ This is one-way materialization from repo to OpenClaw home, not bidirectional sy
 
 ## Minimal rehearsal
 
-The sync/install scripts expect an **initialized OpenClaw home** plus a working
-`openclaw config get agents.list --json` surface. So a blank `mktemp -d` alone is
-not enough.
+The sync/install scripts expect an **initialized OpenClaw home** plus a readable
+`agents` config surface. Either of these initialized shapes is enough:
+- an explicit `agents.list`
+- a defaults-only config with `agents.defaults.workspace`
+
+So a blank `mktemp -d` alone is not enough.
 
 For a bounded rehearsal, use either:
 - an already initialized temp/copy OpenClaw home, or

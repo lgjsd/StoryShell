@@ -14,6 +14,7 @@ if str(SRC_ROOT) not in sys.path:
 
 from storyshell.openclaw_storyshell_stack import (
     STORY_MAIN_AGENT_ID,
+    _load_openclaw_config,
     build_storyshell_agent_batch,
     sync_storyshell_stack,
 )
@@ -28,8 +29,21 @@ class StoryShellStackTests(unittest.TestCase):
                         "id": "main",
                         "default": True,
                         "workspace": "/tmp/openclaw/workspace",
+                        "provider": "openai",
+                        "model": "gpt-5.4",
+                        "thinkingDefault": "medium",
                     }
                 ]
+            }
+        }
+        self.defaults_only_config = {
+            "agents": {
+                "defaults": {
+                    "workspace": "/tmp/openclaw/workspace",
+                    "provider": "openai",
+                    "model": "gpt-5.4",
+                    "thinkingDefault": "medium",
+                }
             }
         }
 
@@ -48,6 +62,9 @@ class StoryShellStackTests(unittest.TestCase):
         self.assertEqual(ids, ["main"])
         main_entry = next(entry for entry in agents if entry["id"] == "main")
         self.assertEqual(main_entry["workspace"], "/tmp/openclaw/workspace")
+        self.assertEqual(main_entry["provider"], "openai")
+        self.assertEqual(main_entry["model"], "gpt-5.4")
+        self.assertEqual(main_entry["thinkingDefault"], "medium")
         self.assertNotIn("subagents", main_entry)
 
     def test_add_mode_adds_exactly_one_dedicated_story_main(self) -> None:
@@ -70,8 +87,53 @@ class StoryShellStackTests(unittest.TestCase):
         main_entry = next(entry for entry in agents if entry["id"] == "main")
         self.assertEqual(main_entry["workspace"], "/tmp/openclaw-home/workspace-story-main")
         self.assertNotIn("subagents", main_entry)
-        self.assertNotIn("model", main_entry)
-        self.assertNotIn("thinkingDefault", main_entry)
+        self.assertEqual(main_entry["provider"], "openai")
+        self.assertEqual(main_entry["model"], "gpt-5.4")
+        self.assertEqual(main_entry["thinkingDefault"], "medium")
+
+    def test_preserve_mode_returns_no_batch_for_defaults_only_config(self) -> None:
+        batch = build_storyshell_agent_batch(
+            existing_config=self.defaults_only_config,
+            openclaw_home="/tmp/openclaw-home",
+            main_agent_mode="preserve",
+        )
+        self.assertEqual(batch, [])
+
+    def test_add_mode_synthesizes_implicit_main_from_defaults_only_config(self) -> None:
+        batch = build_storyshell_agent_batch(
+            existing_config=self.defaults_only_config,
+            openclaw_home="/tmp/openclaw-home",
+            main_agent_mode="add",
+        )
+        self.assertEqual(batch[0]["path"], "agents.list")
+        agents = batch[0]["value"]
+        ids = [entry["id"] for entry in agents]
+        self.assertEqual(ids.count("main"), 1)
+        self.assertEqual(ids.count(STORY_MAIN_AGENT_ID), 1)
+        main_entry = next(entry for entry in agents if entry["id"] == "main")
+        self.assertEqual(main_entry["workspace"], "/tmp/openclaw/workspace")
+        self.assertEqual(main_entry["provider"], "openai")
+        self.assertEqual(main_entry["model"], "gpt-5.4")
+        self.assertEqual(main_entry["thinkingDefault"], "medium")
+        story_main = next(entry for entry in agents if entry["id"] == STORY_MAIN_AGENT_ID)
+        self.assertFalse(story_main["default"])
+        self.assertNotIn("provider", story_main)
+        self.assertNotIn("model", story_main)
+        self.assertNotIn("thinkingDefault", story_main)
+
+    @mock.patch("storyshell.openclaw_storyshell_stack.subprocess.run")
+    def test_load_openclaw_config_reads_agents_subtree(self, mock_run: mock.Mock) -> None:
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            stdout=json.dumps(self.defaults_only_config["agents"]),
+            stderr="",
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "openclaw.json"
+            config_path.write_text("{}\n", encoding="utf-8")
+            loaded = _load_openclaw_config(config_path, openclaw_command="openclaw")
+        self.assertEqual(loaded, self.defaults_only_config)
+        self.assertEqual(mock_run.call_args.args[0], ["openclaw", "config", "get", "agents", "--json"])
 
     @mock.patch("storyshell.openclaw_storyshell_stack._load_openclaw_config")
     def test_sync_materializes_files_without_applying_config(self, mock_load_config: mock.Mock) -> None:
@@ -90,6 +152,20 @@ class StoryShellStackTests(unittest.TestCase):
             batch_payload = json.loads((home / "tmp" / "storyshell-agent-config.batch.json").read_text(encoding="utf-8"))
             self.assertEqual(batch_payload[0]["path"], "agents.list")
             self.assertEqual(batch_payload[0]["value"][0]["workspace"], "/tmp/openclaw/workspace")
+
+    @mock.patch("storyshell.openclaw_storyshell_stack.subprocess.run")
+    @mock.patch("storyshell.openclaw_storyshell_stack._load_openclaw_config")
+    def test_sync_preserve_defaults_only_skips_config_apply(self, mock_load_config: mock.Mock, mock_run: mock.Mock) -> None:
+        mock_load_config.return_value = self.defaults_only_config
+        with tempfile.TemporaryDirectory() as tmpdir:
+            home = Path(tmpdir)
+            (home / "openclaw.json").write_text("{}\n", encoding="utf-8")
+            report = sync_storyshell_stack(openclaw_home=home, dry_run=False, apply_config=True)
+            self.assertFalse(report["configApplied"])
+            self.assertTrue((home / "workspace" / "skills" / "story-authoring" / "SKILL.md").exists())
+            batch_payload = json.loads((home / "tmp" / "storyshell-agent-config.batch.json").read_text(encoding="utf-8"))
+            self.assertEqual(batch_payload, [])
+        mock_run.assert_not_called()
 
     @mock.patch("storyshell.openclaw_storyshell_stack._load_openclaw_config")
     def test_sync_add_mode_materializes_dedicated_story_main_skills(self, mock_load_config: mock.Mock) -> None:

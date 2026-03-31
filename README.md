@@ -61,7 +61,7 @@ python3 scripts/validate_storyshell_package.py examples/alpha-smoke-package --js
 
 If the current scaffold is behaving, the validator should resolve the sample story under `stories/lantern-cellar/` and report `valid: true`.
 
-If you want to test against a different OpenClaw home, pass `--openclaw-home`, but it must point to an **already initialized** OpenClaw home with `openclaw.json`; a blank temp directory is not enough.
+If you want to test against a different OpenClaw home, pass `--openclaw-home`, but it must point to an **already initialized** OpenClaw home with `openclaw.json`; an explicit `agents.list` is fine, and the defaults-only shape with `agents.defaults.workspace` is also fine. A blank temp directory is not enough.
 
 For the fuller smoke-test checklist, see:
 - `docs/testing/linux-alpha-smoke.md`
