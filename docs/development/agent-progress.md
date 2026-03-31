@@ -160,3 +160,48 @@ Reasonable next moves from here:
 ## Repo-state note
 
 The repo now has an initial scaffold commit, but it is still very early-stage. The main thing that is solid is the install/materialization seam plus the single-agent mode split, not the gameplay layer.
+
+## Handoff note — document ingestion probe (2026-03-31)
+
+We paused on a bounded document-ingestion exploration because likely users may upload adventure content from Word / Feishu Docs rather than author directly inside StoryShell.
+
+### What was learned
+
+- The official OpenAI curated Codex skills repo has a `doc` skill under `openai/skills`, which treats `.docx` work as a `python-docx` + optional visual-render review workflow rather than a zero-dependency path.
+- ClawHub has a lighter `read-word` skill candidate, but it is community-maintained and its `.doc` support is only rough / partial.
+- On this host, the installed Lark extension already ships several Feishu-related skills, including:
+  - `feishu-fetch-doc`
+  - `feishu-im-read`
+  - `feishu-create-doc`
+  - `feishu-update-doc`
+- For the immediate experiment, only `feishu-fetch-doc` was relevant.
+
+### Local config state reached
+
+At the time of the probe:
+- `plugins.entries.openclaw-lark.enabled = true`
+- `channels.feishu.enabled = true`
+- `skills.entries.feishu-fetch-doc` was explicitly targeted as the one skill to enable for read-only doc fetch testing
+- the gateway was restarted after the toggle
+
+### Current blocker / uncertainty
+
+In the current assistant session, the actual Feishu doc-fetch tool surface was still not exposed in the callable tool inventory, even after the skill toggle + gateway restart. That strongly suggests the next honest step is a **fresh session reload** rather than more speculative config poking from the stale session.
+
+### Recommended next step
+
+Start a fresh session, then test one real Feishu doc URL/token and determine which case is true:
+1. the new session now exposes the Feishu doc-fetch tool correctly, or
+2. the skill is enabled but the runtime still is not surfacing the plugin tool to the agent.
+
+If the tool appears, use it as a practical ingest probe for StoryShell document-reading design.
+If it still does not appear, inspect the OpenClaw/Lark extension’s tool-registration path rather than continuing to guess at skill toggles.
+
+### Why this matters for StoryShell
+
+This is not just a random plugin experiment. It is part of deciding the cheapest acceptable ingestion path for real user-authored adventure source material:
+- Word / DOCX import
+- Feishu doc import
+- later conversion into StoryShell canon/state structure
+
+No StoryShell code changes were made for this probe yet; this was architecture and environment reconnaissance only.
