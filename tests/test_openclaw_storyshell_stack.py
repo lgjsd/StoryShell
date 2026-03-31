@@ -59,6 +59,8 @@ class StoryShellStackTests(unittest.TestCase):
         self.assertFalse(story_main["default"])
         self.assertEqual(story_main["workspace"], "/tmp/openclaw-home/workspace-story-main")
         self.assertNotIn("subagents", story_main)
+        self.assertNotIn("model", story_main)
+        self.assertNotIn("thinkingDefault", story_main)
 
     def test_replace_mode_reuses_main_slot(self) -> None:
         agents = self._merged_agents("replace")
@@ -68,6 +70,8 @@ class StoryShellStackTests(unittest.TestCase):
         main_entry = next(entry for entry in agents if entry["id"] == "main")
         self.assertEqual(main_entry["workspace"], "/tmp/openclaw-home/workspace-story-main")
         self.assertNotIn("subagents", main_entry)
+        self.assertNotIn("model", main_entry)
+        self.assertNotIn("thinkingDefault", main_entry)
 
     @mock.patch("storyshell.openclaw_storyshell_stack._load_openclaw_config")
     def test_sync_materializes_files_without_applying_config(self, mock_load_config: mock.Mock) -> None:

@@ -33,7 +33,7 @@ The OpenClaw installer currently supports three main-agent modes:
 - `add` — keep the user's current main agent and also add one dedicated `story-main` agent
 - `replace` — replace the current main/default agent config with the StoryShell main-agent preset while keeping the main/default slot
 
-For outside testers, `add` is the safest default because it avoids taking over an existing main agent.
+For outside testers, `add` is the safest default because it avoids taking over an existing main agent. StoryShell assumes users already manage their own provider/model setup; it does not pin one for them.
 
 ## Quick start
 
@@ -41,6 +41,7 @@ Assumptions:
 - OpenClaw is already installed
 - Node is already installed
 - Python 3 is available as `python3`
+- your OpenClaw home already has whatever provider/model setup you intend to use
 - you will test against a **disposable OpenClaw home**, not your real one
 
 Clone the repo and install StoryShell into a disposable OpenClaw home:

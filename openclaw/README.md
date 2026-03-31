@@ -20,19 +20,22 @@ Use the materialization scripts deliberately:
   - install StoryShell skills into `workspace/skills/`
   - install StoryShell wrappers into `workspace/bin/`
   - do not add any StoryShell worker agents
+  - do not touch provider/model choices
 
 - `add`
   - keep everything from `preserve`
   - also add exactly one dedicated `story-main` agent
   - materialize StoryShell skills, wrappers, and main-agent contract files into `workspace-story-main/`
   - do not replace the user's main/default agent
+  - do not pin a provider/model for the added agent
 
 - `replace`
   - replace the current main/default agent config with the StoryShell main-agent preset
   - keep the main/default slot, but point it at a dedicated StoryShell workspace
   - materialize StoryShell skills, wrappers, and main-agent contract files into `workspace-story-main/`
+  - leave provider/model selection to the user's existing OpenClaw setup
 
-The main point: StoryShell should be installable without forcing every user into the same main-agent posture.
+The main point: StoryShell should be installable without forcing every user into the same main-agent posture or pinning one repo opinion about provider/model choice.
 
 ## Install vs sync
 

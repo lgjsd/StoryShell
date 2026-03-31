@@ -1,8 +1,6 @@
 {
   "id": "story-main",
   "workspace": "__OPENCLAW_HOME__/workspace-story-main",
-  "model": "openai-codex/gpt-5.4-mini",
-  "thinkingDefault": "low",
   "tools": {
     "allow": [
       "read",
