@@ -6,9 +6,10 @@ The live `~/.openclaw/` home is only the materialized runtime copy.
 Current scope:
 - one StoryShell main-agent profile
 - three internal modes: author, play, and state
-- four low-cognition skills
+- three low-cognition skills
 - deterministic repo -> OpenClaw materialization
 - explicit main-agent install modes
+- always-loaded routing/bootstrap contract in the main agent
 
 ## Install modes
 
@@ -56,7 +57,6 @@ For a bounded rehearsal, use either:
 - a stubbed `openclaw` command in tests/CI.
 
 Then inspect:
-- `<openclaw-home>/workspace/skills/story-routing/`
 - `<openclaw-home>/workspace/skills/story-authoring/`
 - `<openclaw-home>/workspace/skills/story-runtime/`
 - `<openclaw-home>/workspace/skills/story-state/`

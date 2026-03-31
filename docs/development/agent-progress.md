@@ -4,7 +4,7 @@ Last updated: 2026-03-31
 
 ## Current checkpoint
 
-StoryShell is no longer just a plan document. The scaffold exists as a real repo-owned OpenClaw stack with the install/materialization seam, single-agent mode split, skill set, helper scripts, and focused tests all present.
+StoryShell is no longer just a plan document. The scaffold exists as a real repo-owned OpenClaw stack with the install/materialization seam, single-agent mode split, explicit play-entry/bootstrap contract, helper scripts, and focused tests all present.
 
 The repo is still in scaffold phase, not gameplay phase.
 
@@ -28,16 +28,17 @@ The canonical OpenClaw-side assets are now present in `openclaw/`:
   - `story-main`
 - one agent config snippet:
   - `openclaw/config/story-main-agent.json5`
-- four small skills:
-  - `story-routing`
+- three specialist skills:
   - `story-authoring`
   - `story-runtime`
   - `story-state`
 
-The mode split is now explicit inside one agent:
-- `author` for creating, revising, and repairing canon
-- `play` for in-fiction turn resolution
-- `state` for explicit save/load/reset/patch style control
+Mode classification and play-entry bootstrap now live in the always-loaded main agent contract instead of a separate routing skill.
+
+The mode split is explicit inside one agent:
+- `author` for creating, revising, importing, and repairing canon
+- `play` for in-fiction turn resolution after story/run selection
+- `state` for explicit save/load/reset/patch/branch style control of mutable run data
 
 ### 3. Materialization/install path exists
 
@@ -54,13 +55,26 @@ Implemented behavior:
   - `replace`
 - writes a deterministic config batch payload
 - writes a `storyshell-manifest.json`
-- materializes the four skills into the main workspace skill tree
+- materializes the three specialist skills into the main workspace skill tree
 - materializes stable wrappers into the main workspace `bin/` directory
 - materializes a dedicated `story-main` workspace only when `add` or `replace` needs it
 
 The main design choice here is already in place: install posture is explicit, instead of forcing one global replacement policy on every OpenClaw home.
 
-### 4. Low-cognition helper surface exists
+### 4. Core play-entry protocol is now explicit
+
+The main agent contract now spells out the hot-path bootstrap sequence for play:
+- resolve which story is active
+- resolve whether to continue, load, branch, restart, or initialize a run
+- load only the manifest, active run, and relevant canon
+- only then hand off to runtime turn resolution
+
+The package contract is also now explicit:
+- reusable canon lives under `stories/<slug>/canon/`
+- reset defaults live at `stories/<slug>/state/initial.json`
+- mutable run data lives under `stories/<slug>/runs/` and `stories/<slug>/saves/`
+
+### 5. Low-cognition helper surface exists
 
 Two small deterministic helpers now exist:
 - `scripts/validate_storyshell_package.py`
@@ -74,7 +88,7 @@ Current helper surface:
 
 This is still deliberately small, but it is real and usable.
 
-### 5. Focused verification exists
+### 6. Focused verification exists
 
 There is now a focused stack test file at:
 - `tests/test_openclaw_storyshell_stack.py`

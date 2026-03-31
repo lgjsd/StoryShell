@@ -8,6 +8,7 @@ Create a small repo-owned OpenClaw stack for text adventure work with explicit m
 - state
 
 The first pass should optimize for low cognition load rather than narrative richness, with one StoryShell agent switching between those three modes.
+Mode classification plus play-entry bootstrap should live in the always-loaded main-agent contract, not in a separate routing skill.
 
 ## Scaffold scope
 
@@ -17,7 +18,8 @@ The first pass should optimize for low cognition load rather than narrative rich
 
 ### 2. OpenClaw assets
 - add one workspace template for `story-main`
-- add small skills for routing, authoring, runtime, and state control
+- keep the routing/bootstrap contract in `AGENTS.md`
+- add small skills for authoring, runtime, and state control
 - add one config snippet for the StoryShell main agent
 
 ### 3. Materialization path
@@ -31,7 +33,13 @@ The first pass should optimize for low cognition load rather than narrative rich
 - `preserve` should install StoryShell skills/wrappers into the user's main workspace without adding worker agents
 - avoid overwriting the user's existing workspace files when replacing the main agent; use a dedicated StoryShell workspace instead
 
-### 5. Low-cognition helper surface
+### 5. Story package shape
+- each story lives under `stories/<slug>/`
+- reusable canon lives under `canon/`
+- default reset source lives at `state/initial.json`
+- disposable runtime state lives under `runs/` and `saves/`
+
+### 6. Low-cognition helper surface
 - add one package validator script
 - add one state helper script
 - materialize tiny wrappers instead of making agents rediscover repo paths

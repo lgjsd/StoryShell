@@ -1,6 +1,6 @@
 ---
 name: story-state
-description: Inspect and control mutable text-adventure run state using stable wrappers. Use when the user asks to show current state, save or load a checkpoint, rewind a run, branch a run, edit flags or relationships, reset a playthrough, or delete a run entirely.
+description: Inspect and control mutable text-adventure run state using stable wrappers. Use when the user asks to show current state, save or load a checkpoint, branch a run, restart from initial state, patch flags or relationships, or delete mutable run data.
 ---
 
 # Story State
@@ -12,6 +12,14 @@ Treat state as a first-class reversible object.
 - Keep reset and delete distinct.
 - Use deterministic state helpers when available.
 - If an operation is destructive and the user's intent is unclear, ask once before proceeding.
+- Operate on mutable files under `runs/` and `saves/`, not reusable canon under `canon/`.
+- Treat `state/initial.json` as the reset source, not as the live run file.
+
+## Story split
+- Reusable: `manifest.json`, `canon/`, `state/initial.json`
+- Mutable: `runs/`, `saves/`
+
+Use this skill for the mutable side only.
 
 ## Current helper surface
 - `storyshell-state show <state-file>`

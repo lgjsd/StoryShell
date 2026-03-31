@@ -27,7 +27,6 @@ OPENCLAW_SKILLS_DIR = OPENCLAW_ASSETS_ROOT / "skills"
 SCRIPT_ROOT = REPO_ROOT / "scripts"
 
 SKILL_SOURCES = {
-    "story-routing": OPENCLAW_SKILLS_DIR / "story-routing",
     "story-authoring": OPENCLAW_SKILLS_DIR / "story-authoring",
     "story-runtime": OPENCLAW_SKILLS_DIR / "story-runtime",
     "story-state": OPENCLAW_SKILLS_DIR / "story-state",

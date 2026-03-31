@@ -7,10 +7,11 @@ Current scope:
 - deterministic repo -> OpenClaw materialization
 - one StoryShell agent / brain
 - three internal modes: author, play, state
-- four small skills: story-routing, story-authoring, story-runtime, story-state
+- three small skills: story-authoring, story-runtime, story-state
 - basic local helper scripts for package validation and run-state inspection/reset/patch
 
 This repo is intentionally in scaffold phase. It aims to make the install/mode split boring before adding richer game logic.
+Mode classification plus play-entry bootstrap now live in the main StoryShell agent contract rather than in a separate routing skill.
 
 ## Design stance
 

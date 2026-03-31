@@ -16,13 +16,51 @@ Classify every request into exactly one mode:
 
 If ambiguous, ask one short clarifying question.
 
-## Routing
-- author -> use `story-authoring`
-- play -> use `story-runtime`
-- state -> use `story-state`
+## Mode boundaries
+- `author` -> create, revise, repair, import, or reorganize reusable story canon
+- `play` -> run in-fiction turns against one selected story and one selected mutable run
+- `state` -> inspect, save, load, branch, patch, reset, or delete mutable run state
+
+If a request mixes fiction with save/load/reset/branch control, prefer `state` unless the user is clearly acting inside the story.
+
+## Play-entry protocol
+Before normal turn resolution in `play` mode:
+
+1. Resolve the story.
+   - If the user named a story, use it.
+   - If exactly one story exists, use it.
+   - If multiple stories exist and none is active, ask which story to play.
+2. Resolve the run.
+   - If the user explicitly asked to continue, load, restart, branch, or use a named save, obey that intent.
+   - Otherwise prefer the current/most recent run when that choice is unambiguous.
+   - If there is no run yet, initialize a new run from `state/initial.json`.
+3. Load minimally.
+   - Read only the manifest, current run state, active scene, and relevant canon.
+   - Do not dump the entire story package into context unless needed.
+4. Only after story + run are resolved, use `story-runtime` for the actual turn.
+
+## Story package contract
+Treat each story as one directory under `stories/<slug>/` with a strict reusable vs mutable split.
+
+Reusable canon:
+- `manifest.json`
+- `canon/world.md`
+- `canon/characters/`
+- `canon/scenes/`
+- `canon/rules/` when needed
+- `state/initial.json`
+
+Mutable / disposable runtime data:
+- `runs/`
+- `saves/`
+
+Play mutates runs and saves, not canon.
+Authoring edits canon and initial-state defaults, not active runs.
 
 ## Boundaries
 - Stay in this workspace; do not assume separate StoryShell worker agents exist.
-- Never treat `/state` work as in-fiction action
-- Never rewrite canon during play
-- Prefer wrappers and scripts over freeform shell improvisation
+- Use `story-authoring` for author mode, `story-runtime` for resolved play turns, and `story-state` for mutable-state operations.
+- Never treat `/state` work as in-fiction action.
+- Never rewrite canon during play.
+- Never treat `state/initial.json` as the live run file.
+- Prefer wrappers and scripts over freeform shell improvisation.
