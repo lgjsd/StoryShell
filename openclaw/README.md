@@ -4,9 +4,8 @@ This directory is the canonical source of truth for the shipped OpenClaw side of
 The live `~/.openclaw/` home is only the materialized runtime copy.
 
 Current scope:
-- one chat-facing router profile
-- one author worker
-- one director worker
+- one StoryShell main-agent profile
+- three internal modes: author, play, and state
 - four low-cognition skills
 - deterministic repo -> OpenClaw materialization
 - explicit main-agent install modes
@@ -18,18 +17,17 @@ Use the materialization scripts deliberately:
 - `preserve`
   - keep the user's current main/default agent
   - install StoryShell skills into `workspace/skills/`
-  - add `story-author` and `story-director`
-  - widen the current main agent's `subagents.allowAgents`
+  - install StoryShell wrappers into `workspace/bin/`
+  - do not add any StoryShell worker agents
 
 - `add`
-  - do everything from `preserve`
-  - also add a dedicated `story-main` agent
+  - keep everything from `preserve`
+  - also add exactly one dedicated `story-main` agent
   - do not replace the user's main/default agent
 
 - `replace`
   - replace the current main/default agent config with the StoryShell main-agent preset
   - keep the main/default slot, but point it at a dedicated StoryShell workspace
-  - still add `story-author` and `story-director`
 
 The main point: StoryShell should be installable without forcing every user into the same main-agent posture.
 
@@ -49,18 +47,19 @@ This is one-way materialization from repo to OpenClaw home, not bidirectional sy
 
 ## Minimal rehearsal
 
-```bash
-cd /home/javier/StoryShell
-TMP_OPENCLAW_HOME="$(mktemp -d)"
-python3 openclaw/scripts/sync_storyshell_stack.py   --openclaw-home "$TMP_OPENCLAW_HOME"   --main-agent-mode preserve   --json
-```
+The sync/install scripts expect an **initialized OpenClaw home** plus a working
+`openclaw config get agents.list --json` surface. So a blank `mktemp -d` alone is
+not enough.
+
+For a bounded rehearsal, use either:
+- an already initialized temp/copy OpenClaw home, or
+- a stubbed `openclaw` command in tests/CI.
 
 Then inspect:
-- `$TMP_OPENCLAW_HOME/workspace/skills/story-routing/`
-- `$TMP_OPENCLAW_HOME/workspace/skills/story-authoring/`
-- `$TMP_OPENCLAW_HOME/workspace/skills/story-runtime/`
-- `$TMP_OPENCLAW_HOME/workspace/skills/story-state/`
-- `$TMP_OPENCLAW_HOME/workspace-story-author/`
-- `$TMP_OPENCLAW_HOME/workspace-story-director/`
-- `$TMP_OPENCLAW_HOME/storyshell-manifest.json`
-- `$TMP_OPENCLAW_HOME/tmp/storyshell-agent-config.batch.json`
+- `<openclaw-home>/workspace/skills/story-routing/`
+- `<openclaw-home>/workspace/skills/story-authoring/`
+- `<openclaw-home>/workspace/skills/story-runtime/`
+- `<openclaw-home>/workspace/skills/story-state/`
+- `<openclaw-home>/workspace/bin/`
+- `<openclaw-home>/storyshell-manifest.json`
+- `<openclaw-home>/tmp/storyshell-agent-config.batch.json`

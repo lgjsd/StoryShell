@@ -13,8 +13,6 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from storyshell.openclaw_storyshell_stack import (
-    STORY_AUTHOR_AGENT_ID,
-    STORY_DIRECTOR_AGENT_ID,
     STORY_MAIN_AGENT_ID,
     build_storyshell_agent_batch,
     sync_storyshell_stack,
@@ -44,23 +42,23 @@ class StoryShellStackTests(unittest.TestCase):
         self.assertEqual(batch[0]["path"], "agents.list")
         return batch[0]["value"]
 
-    def test_preserve_mode_keeps_main_and_adds_workers(self) -> None:
+    def test_preserve_mode_keeps_existing_main_only(self) -> None:
         agents = self._merged_agents("preserve")
         ids = [entry["id"] for entry in agents]
-        self.assertIn("main", ids)
-        self.assertIn(STORY_AUTHOR_AGENT_ID, ids)
-        self.assertIn(STORY_DIRECTOR_AGENT_ID, ids)
-        self.assertNotIn(STORY_MAIN_AGENT_ID, ids)
+        self.assertEqual(ids, ["main"])
         main_entry = next(entry for entry in agents if entry["id"] == "main")
-        allow_agents = main_entry["subagents"]["allowAgents"]
-        self.assertEqual(allow_agents, ["main", STORY_AUTHOR_AGENT_ID, STORY_DIRECTOR_AGENT_ID])
+        self.assertEqual(main_entry["workspace"], "/tmp/openclaw/workspace")
+        self.assertNotIn("subagents", main_entry)
 
-    def test_add_mode_adds_dedicated_story_main(self) -> None:
+    def test_add_mode_adds_exactly_one_dedicated_story_main(self) -> None:
         agents = self._merged_agents("add")
         ids = [entry["id"] for entry in agents]
         self.assertIn(STORY_MAIN_AGENT_ID, ids)
+        self.assertEqual(ids.count(STORY_MAIN_AGENT_ID), 1)
         story_main = next(entry for entry in agents if entry["id"] == STORY_MAIN_AGENT_ID)
         self.assertFalse(story_main["default"])
+        self.assertEqual(story_main["workspace"], "/tmp/openclaw-home/workspace-story-main")
+        self.assertNotIn("subagents", story_main)
 
     def test_replace_mode_reuses_main_slot(self) -> None:
         agents = self._merged_agents("replace")
@@ -69,7 +67,7 @@ class StoryShellStackTests(unittest.TestCase):
         self.assertNotIn(STORY_MAIN_AGENT_ID, ids)
         main_entry = next(entry for entry in agents if entry["id"] == "main")
         self.assertEqual(main_entry["workspace"], "/tmp/openclaw-home/workspace-story-main")
-        self.assertEqual(main_entry["subagents"]["allowAgents"], ["main", STORY_AUTHOR_AGENT_ID, STORY_DIRECTOR_AGENT_ID])
+        self.assertNotIn("subagents", main_entry)
 
     @mock.patch("storyshell.openclaw_storyshell_stack._load_openclaw_config")
     def test_sync_materializes_files_without_applying_config(self, mock_load_config: mock.Mock) -> None:
@@ -82,11 +80,11 @@ class StoryShellStackTests(unittest.TestCase):
             self.assertTrue((home / "storyshell-manifest.json").exists())
             self.assertTrue((home / "tmp" / "storyshell-agent-config.batch.json").exists())
             self.assertTrue((home / "workspace" / "skills" / "story-routing" / "SKILL.md").exists())
-            self.assertTrue((home / "workspace-story-author" / "AGENTS.md").exists())
-            self.assertTrue((home / "workspace-story-director" / "AGENTS.md").exists())
             self.assertTrue((home / "workspace" / "bin" / "storyshell-state").exists())
+            self.assertFalse((home / "workspace-story-main").exists())
             batch_payload = json.loads((home / "tmp" / "storyshell-agent-config.batch.json").read_text(encoding="utf-8"))
             self.assertEqual(batch_payload[0]["path"], "agents.list")
+            self.assertEqual(batch_payload[0]["value"][0]["workspace"], "/tmp/openclaw/workspace")
 
 
 if __name__ == "__main__":

@@ -14,8 +14,6 @@ import sys
 from typing import Any, Mapping
 
 
-STORY_AUTHOR_AGENT_ID = "story-author"
-STORY_DIRECTOR_AGENT_ID = "story-director"
 STORY_MAIN_AGENT_ID = "story-main"
 STORYSHELL_MANIFEST_VERSION = "storyshell_bootstrap_v0"
 OPENCLAW_HOME_PLACEHOLDER = "__OPENCLAW_HOME__"
@@ -36,13 +34,9 @@ SKILL_SOURCES = {
 }
 WORKSPACE_TEMPLATES = {
     STORY_MAIN_AGENT_ID: OPENCLAW_AGENTS_DIR / "story-main",
-    STORY_AUTHOR_AGENT_ID: OPENCLAW_AGENTS_DIR / "story-author",
-    STORY_DIRECTOR_AGENT_ID: OPENCLAW_AGENTS_DIR / "story-director",
 }
 AGENT_SNIPPET_PATHS = {
     STORY_MAIN_AGENT_ID: OPENCLAW_CONFIG_DIR / "story-main-agent.json5",
-    STORY_AUTHOR_AGENT_ID: OPENCLAW_CONFIG_DIR / "story-author-agent.json5",
-    STORY_DIRECTOR_AGENT_ID: OPENCLAW_CONFIG_DIR / "story-director-agent.json5",
 }
 PACKAGE_VALIDATOR_SCRIPT = SCRIPT_ROOT / "validate_storyshell_package.py"
 STATE_TOOL_SCRIPT = SCRIPT_ROOT / "storyshell_state_tool.py"
@@ -160,20 +154,6 @@ def _find_main_agent_index(agents_list: list[dict[str, Any]]) -> int:
     raise StoryShellError("OpenClaw config does not define a main/default agent.")
 
 
-def _merge_allow_agents(agent: dict[str, Any], required_ids: list[str]) -> dict[str, Any]:
-    updated = dict(agent)
-    subagents = dict(updated.get("subagents") or {})
-    allow_agents_raw = subagents.get("allowAgents")
-    allow_agents = [value for value in allow_agents_raw if isinstance(value, str)] if isinstance(allow_agents_raw, list) else []
-    merged: list[str] = []
-    for agent_id in [*allow_agents, *required_ids]:
-        if agent_id not in merged:
-            merged.append(agent_id)
-    subagents["allowAgents"] = merged
-    updated["subagents"] = subagents
-    return updated
-
-
 def _upsert_agent(agent_list: list[dict[str, Any]], agent: dict[str, Any]) -> None:
     for index, entry in enumerate(agent_list):
         if entry.get("id") == agent.get("id"):
@@ -205,28 +185,18 @@ def build_storyshell_agent_batch(
     main_entry = dict(merged_agents[main_index])
     main_id = _require_string(main_entry.get("id") or "main", path="openclawConfig.mainAgent.id")
 
-    author_agent = load_agent_snippet(STORY_AUTHOR_AGENT_ID, openclaw_home=openclaw_home)
-    director_agent = load_agent_snippet(STORY_DIRECTOR_AGENT_ID, openclaw_home=openclaw_home)
-    _upsert_agent(merged_agents, author_agent)
-    _upsert_agent(merged_agents, director_agent)
-
-    required_subagents = [main_id, STORY_AUTHOR_AGENT_ID, STORY_DIRECTOR_AGENT_ID]
-
     if main_agent_mode == "preserve":
-        merged_agents[main_index] = _merge_allow_agents(main_entry, required_subagents)
+        merged_agents[main_index] = main_entry
     elif main_agent_mode == "add":
         story_main = load_agent_snippet(STORY_MAIN_AGENT_ID, openclaw_home=openclaw_home)
         story_main["id"] = story_main_id
         story_main["default"] = False
-        story_main = _merge_allow_agents(story_main, [story_main_id, STORY_AUTHOR_AGENT_ID, STORY_DIRECTOR_AGENT_ID])
         _upsert_agent(merged_agents, story_main)
     elif main_agent_mode == "replace":
         replacement = load_agent_snippet(STORY_MAIN_AGENT_ID, openclaw_home=openclaw_home)
         replacement["id"] = main_id
         if "default" in main_entry:
             replacement["default"] = main_entry["default"]
-        replacement["subagents"] = {"allowAgents": []}
-        replacement = _merge_allow_agents(replacement, required_subagents)
         merged_agents[main_index] = replacement
 
     return [{"path": "agents.list", "value": merged_agents}]
@@ -283,6 +253,10 @@ def _materialize_wrapper_group(wrapper_dir: Path, wrapper_scripts: Mapping[str, 
     return written
 
 
+def _uses_dedicated_story_main_workspace(main_agent_mode: str) -> bool:
+    return main_agent_mode in {"add", "replace"}
+
+
 def sync_storyshell_stack(
     *,
     openclaw_home: str | Path = "~/.openclaw",
@@ -308,17 +282,20 @@ def sync_storyshell_stack(
         else resolved_home / "tmp" / "storyshell-agent-config.batch.json"
     )
     manifest_path = resolved_home / "storyshell-manifest.json"
+    use_dedicated_story_main = _uses_dedicated_story_main_workspace(main_agent_mode)
 
     workspace_targets = {
         "main": resolved_home / "workspace" / "bin",
-        STORY_MAIN_AGENT_ID: resolved_home / "workspace-story-main" / "bin",
-        STORY_AUTHOR_AGENT_ID: resolved_home / "workspace-story-author" / "bin",
-        STORY_DIRECTOR_AGENT_ID: resolved_home / "workspace-story-director" / "bin",
     }
+    if use_dedicated_story_main:
+        workspace_targets[STORY_MAIN_AGENT_ID] = resolved_home / "workspace-story-main" / "bin"
     wrapper_commands = {
         key: {name: str(path / name) for name in _build_wrapper_scripts(python_interpreter=Path(sys.executable).resolve(), manifest_path=manifest_path)}
         for key, path in workspace_targets.items()
     }
+    workspace_targets_report = {}
+    if use_dedicated_story_main:
+        workspace_targets_report[STORY_MAIN_AGENT_ID] = str(resolved_home / "workspace-story-main")
 
     report: dict[str, Any] = {
         "openclawHome": str(resolved_home),
@@ -330,11 +307,7 @@ def sync_storyshell_stack(
         "batchOperations": batch_operations,
         "ownedTargets": {
             "mainSkills": {name: str(resolved_home / "workspace" / "skills" / name) for name in SKILL_SOURCES},
-            "workspaces": {
-                STORY_MAIN_AGENT_ID: str(resolved_home / "workspace-story-main"),
-                STORY_AUTHOR_AGENT_ID: str(resolved_home / "workspace-story-author"),
-                STORY_DIRECTOR_AGENT_ID: str(resolved_home / "workspace-story-director"),
-            },
+            "workspaces": workspace_targets_report,
             "manifest": str(manifest_path),
             "wrappers": wrapper_commands,
         },
@@ -346,11 +319,9 @@ def sync_storyshell_stack(
         return report
 
     skill_targets = {name: resolved_home / "workspace" / "skills" / name for name in SKILL_SOURCES}
-    workspace_roots = {
-        STORY_MAIN_AGENT_ID: resolved_home / "workspace-story-main",
-        STORY_AUTHOR_AGENT_ID: resolved_home / "workspace-story-author",
-        STORY_DIRECTOR_AGENT_ID: resolved_home / "workspace-story-director",
-    }
+    workspace_roots = {}
+    if use_dedicated_story_main:
+        workspace_roots[STORY_MAIN_AGENT_ID] = resolved_home / "workspace-story-main"
 
     copied_skills: dict[str, str] = {}
     copied_workspaces: dict[str, list[str]] = {}
@@ -365,8 +336,8 @@ def sync_storyshell_stack(
         _copy_owned_directory(source_dir, target_path)
         copied_skills[skill_name] = str(target_path)
 
-    for agent_id, template_dir in WORKSPACE_TEMPLATES.items():
-        copied_workspaces[agent_id] = _copy_workspace_template(template_dir, workspace_roots[agent_id])
+    for agent_id, workspace_root in workspace_roots.items():
+        copied_workspaces[agent_id] = _copy_workspace_template(WORKSPACE_TEMPLATES[agent_id], workspace_root)
 
     wrapper_payload = _build_wrapper_scripts(
         python_interpreter=Path(sys.executable).resolve(),

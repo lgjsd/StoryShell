@@ -5,7 +5,8 @@ StoryShell is a scaffold for a low-cognition OpenClaw text-adventure stack.
 Current scope:
 - repo-owned OpenClaw assets
 - deterministic repo -> OpenClaw materialization
-- three-agent split: story-main, story-author, story-director
+- one StoryShell agent / brain
+- three internal modes: author, play, state
 - four small skills: story-routing, story-authoring, story-runtime, story-state
 - basic local helper scripts for package validation and run-state inspection/reset/patch
 
@@ -23,8 +24,8 @@ This repo is intentionally in scaffold phase. It aims to make the install/mode s
 
 The OpenClaw installer supports three main-agent modes:
 
-- `preserve` — keep the user's current main agent; install StoryShell skills into the main workspace and add the author/director worker agents
-- `add` — preserve the user's current main agent and also add a dedicated `story-main` agent
+- `preserve` — keep the user's current main agent; install StoryShell skills and wrappers into the main workspace without adding StoryShell worker agents
+- `add` — preserve the user's current main agent and also add one dedicated `story-main` agent
 - `replace` — replace the current main/default agent config with the StoryShell main-agent preset while keeping the main agent id/default slot
 
 ## Initial repo layout

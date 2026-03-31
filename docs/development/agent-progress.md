@@ -4,7 +4,7 @@ Last updated: 2026-03-31
 
 ## Current checkpoint
 
-StoryShell is no longer just a plan document. The scaffold exists as a real repo-owned OpenClaw stack with the install/materialization seam, agent split, skill set, helper scripts, and focused tests all present.
+StoryShell is no longer just a plan document. The scaffold exists as a real repo-owned OpenClaw stack with the install/materialization seam, single-agent mode split, skill set, helper scripts, and focused tests all present.
 
 The repo is still in scaffold phase, not gameplay phase.
 
@@ -24,24 +24,20 @@ That means the project has crossed from "idea plus plan" into "inspectable scaff
 ### 2. Repo-owned OpenClaw assets exist
 
 The canonical OpenClaw-side assets are now present in `openclaw/`:
-- three agent workspace templates:
+- one agent workspace template:
   - `story-main`
-  - `story-author`
-  - `story-director`
-- three agent config snippets:
+- one agent config snippet:
   - `openclaw/config/story-main-agent.json5`
-  - `openclaw/config/story-author-agent.json5`
-  - `openclaw/config/story-director-agent.json5`
 - four small skills:
   - `story-routing`
   - `story-authoring`
   - `story-runtime`
   - `story-state`
 
-The role split is now explicit:
-- `story-main` is the chat-facing router/orchestrator
-- `story-author` is the writer/editor worker
-- `story-director` is the lighter read/exec worker for scene/runtime guidance
+The mode split is now explicit inside one agent:
+- `author` for creating, revising, and repairing canon
+- `play` for in-fiction turn resolution
+- `state` for explicit save/load/reset/patch style control
 
 ### 3. Materialization/install path exists
 
@@ -52,7 +48,6 @@ The repo now has a real one-way repo -> OpenClaw materialization path:
 
 Implemented behavior:
 - loads the existing OpenClaw agent list
-- merges in StoryShell workers
 - supports three main-agent modes:
   - `preserve`
   - `add`
@@ -60,8 +55,8 @@ Implemented behavior:
 - writes a deterministic config batch payload
 - writes a `storyshell-manifest.json`
 - materializes the four skills into the main workspace skill tree
-- materializes dedicated StoryShell workspaces for `story-main`, `story-author`, and `story-director`
-- materializes stable wrappers into each workspace `bin/` directory
+- materializes stable wrappers into the main workspace `bin/` directory
+- materializes a dedicated `story-main` workspace only when `add` or `replace` needs it
 
 The main design choice here is already in place: install posture is explicit, instead of forcing one global replacement policy on every OpenClaw home.
 
@@ -85,10 +80,10 @@ There is now a focused stack test file at:
 - `tests/test_openclaw_storyshell_stack.py`
 
 It currently checks:
-- `preserve` mode keeps the existing main agent and widens `allowAgents`
-- `add` mode adds a dedicated `story-main`
+- `preserve` mode keeps the existing main agent unchanged
+- `add` mode adds exactly one dedicated `story-main`
 - `replace` mode reuses the main slot while pointing it at the StoryShell workspace
-- sync/materialization writes the expected manifest, batch payload, skills, workspaces, and wrappers
+- sync/materialization writes the expected manifest, batch payload, skills, and wrappers without creating unused worker workspaces
 
 ## Validation performed at this checkpoint
 
@@ -109,9 +104,9 @@ A disposable temp-home sync rehearsal also succeeded with a stubbed `openclaw` C
 
 What that confirmed in practice:
 - the sync path can materialize the StoryShell assets into an OpenClaw home
-- `preserve` mode produces the expected merged agent batch
+- `preserve` mode leaves the existing main-agent config intact
 - the manifest and wrapper scripts are written where expected
-- the dedicated author/director/main workspaces are copied correctly
+- the dedicated `story-main` workspace is no longer created unless a mode needs it
 
 So the scaffold is not only statically present; its installation path has been exercised in a bounded rehearsal.
 
@@ -144,10 +139,10 @@ It also means this repo should not yet be described as a finished interactive fi
 Reasonable next moves from here:
 1. add one tiny canonical sample game package
 2. define the exact runtime turn contract between canon, mutable state, and player-facing output
-3. decide whether `story-director` remains a light orchestration worker or becomes a stronger runtime/referee agent
+3. sharpen the single-agent operating contract between author/play/state mode boundaries
 4. expand tests from install plumbing into one or two full play-loop rehearsals
 5. only then widen authoring/runtime capability
 
 ## Repo-state note
 
-At this checkpoint the repo contents exist locally, but there is not yet a committed history in Git. So the progress is real, but still pre-first-commit.
+The repo now has an initial scaffold commit, but it is still very early-stage. The main thing that is solid is the install/materialization seam plus the single-agent mode split, not the gameplay layer.

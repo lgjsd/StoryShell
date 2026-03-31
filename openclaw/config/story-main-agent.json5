@@ -8,17 +8,7 @@
       "read",
       "write",
       "edit",
-      "exec",
-      "sessions_spawn",
-      "sessions_send",
-      "sessions_history"
-    ]
-  },
-  "subagents": {
-    "allowAgents": [
-      "story-main",
-      "story-author",
-      "story-director"
+      "exec"
     ]
   }
 }
