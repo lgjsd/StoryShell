@@ -1,0 +1,11 @@
+{
+  "scene": "cellar-door",
+  "doorUnlocked": false,
+  "inventory": [
+    "brass-lantern",
+    "cellar-key"
+  ],
+  "flags": {
+    "metCaretaker": false
+  }
+}

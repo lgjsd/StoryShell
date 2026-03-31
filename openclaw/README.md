@@ -24,11 +24,13 @@ Use the materialization scripts deliberately:
 - `add`
   - keep everything from `preserve`
   - also add exactly one dedicated `story-main` agent
+  - materialize StoryShell skills, wrappers, and main-agent contract files into `workspace-story-main/`
   - do not replace the user's main/default agent
 
 - `replace`
   - replace the current main/default agent config with the StoryShell main-agent preset
   - keep the main/default slot, but point it at a dedicated StoryShell workspace
+  - materialize StoryShell skills, wrappers, and main-agent contract files into `workspace-story-main/`
 
 The main point: StoryShell should be installable without forcing every user into the same main-agent posture.
 
@@ -61,5 +63,7 @@ Then inspect:
 - `<openclaw-home>/workspace/skills/story-runtime/`
 - `<openclaw-home>/workspace/skills/story-state/`
 - `<openclaw-home>/workspace/bin/`
+- `<openclaw-home>/workspace-story-main/skills/` when using `add` or `replace`
+- `<openclaw-home>/workspace-story-main/bin/` when using `add` or `replace`
 - `<openclaw-home>/storyshell-manifest.json`
 - `<openclaw-home>/tmp/storyshell-agent-config.batch.json`

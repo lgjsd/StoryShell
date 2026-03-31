@@ -58,6 +58,7 @@ Implemented behavior:
 - materializes the three specialist skills into the main workspace skill tree
 - materializes stable wrappers into the main workspace `bin/` directory
 - materializes a dedicated `story-main` workspace only when `add` or `replace` needs it
+- materializes the three specialist skills into that dedicated workspace when `add` or `replace` is used
 
 The main design choice here is already in place: install posture is explicit, instead of forcing one global replacement policy on every OpenClaw home.
 
@@ -81,10 +82,20 @@ Two small deterministic helpers now exist:
 - `scripts/storyshell_state_tool.py`
 
 Current helper surface:
-- package validation for the minimal game-package shape
+- package validation for the minimal `stories/<slug>/...` package shape
 - state inspection with `show`
 - state reset from an initial JSON file
 - shallow JSON patching for run-state edits
+
+### 6a. Tiny sample package exists
+
+The repo now includes one tiny smoke-test package at:
+- `examples/alpha-smoke-package/`
+
+Its job is narrow:
+- prove the canonical `stories/<slug>/...` layout
+- give Linux testers a concrete validator target
+- stay small and inspectable
 
 This is still deliberately small, but it is real and usable.
 
@@ -132,7 +143,7 @@ Not yet implemented:
 - a real story-turn execution engine
 - richer package compilation/linting beyond the minimal validator
 - route/branch authoring helpers
-- a sample playable game package
+- a meaningful playable sample beyond the tiny smoke-test package
 - save-slot / branching workflow beyond the current small state helper surface
 - schema/version migration helpers
 - broader end-to-end tests for real play loops

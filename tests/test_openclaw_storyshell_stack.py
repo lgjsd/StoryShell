@@ -87,6 +87,45 @@ class StoryShellStackTests(unittest.TestCase):
             self.assertEqual(batch_payload[0]["path"], "agents.list")
             self.assertEqual(batch_payload[0]["value"][0]["workspace"], "/tmp/openclaw/workspace")
 
+    @mock.patch("storyshell.openclaw_storyshell_stack._load_openclaw_config")
+    def test_sync_add_mode_materializes_dedicated_story_main_skills(self, mock_load_config: mock.Mock) -> None:
+        mock_load_config.return_value = self.existing_config
+        with tempfile.TemporaryDirectory() as tmpdir:
+            home = Path(tmpdir)
+            (home / "openclaw.json").write_text("{}\n", encoding="utf-8")
+            report = sync_storyshell_stack(
+                openclaw_home=home,
+                dry_run=False,
+                apply_config=False,
+                main_agent_mode="add",
+            )
+            self.assertEqual(report["mainAgentMode"], "add")
+            self.assertTrue((home / "workspace" / "skills" / "story-authoring" / "SKILL.md").exists())
+            self.assertTrue((home / "workspace-story-main" / "AGENTS.md").exists())
+            self.assertTrue((home / "workspace-story-main" / "skills" / "story-authoring" / "SKILL.md").exists())
+            self.assertTrue((home / "workspace-story-main" / "skills" / "story-runtime" / "SKILL.md").exists())
+            self.assertTrue((home / "workspace-story-main" / "skills" / "story-state" / "SKILL.md").exists())
+            self.assertTrue((home / "workspace-story-main" / "bin" / "storyshell-validate").exists())
+
+    @mock.patch("storyshell.openclaw_storyshell_stack._load_openclaw_config")
+    def test_sync_replace_mode_materializes_dedicated_story_main_skills(self, mock_load_config: mock.Mock) -> None:
+        mock_load_config.return_value = self.existing_config
+        with tempfile.TemporaryDirectory() as tmpdir:
+            home = Path(tmpdir)
+            (home / "openclaw.json").write_text("{}\n", encoding="utf-8")
+            report = sync_storyshell_stack(
+                openclaw_home=home,
+                dry_run=False,
+                apply_config=False,
+                main_agent_mode="replace",
+            )
+            self.assertEqual(report["mainAgentMode"], "replace")
+            self.assertTrue((home / "workspace-story-main" / "AGENTS.md").exists())
+            self.assertTrue((home / "workspace-story-main" / "skills" / "story-authoring" / "SKILL.md").exists())
+            self.assertTrue((home / "workspace-story-main" / "skills" / "story-runtime" / "SKILL.md").exists())
+            self.assertTrue((home / "workspace-story-main" / "skills" / "story-state" / "SKILL.md").exists())
+            self.assertTrue((home / "workspace-story-main" / "bin" / "storyshell-state").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

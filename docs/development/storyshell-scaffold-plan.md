@@ -35,9 +35,9 @@ Mode classification plus play-entry bootstrap should live in the always-loaded m
 
 ### 5. Story package shape
 - each story lives under `stories/<slug>/`
-- reusable canon lives under `canon/`
-- default reset source lives at `state/initial.json`
-- disposable runtime state lives under `runs/` and `saves/`
+- reusable canon lives under `stories/<slug>/canon/`
+- default reset source lives at `stories/<slug>/state/initial.json`
+- disposable runtime state lives under `stories/<slug>/runs/` and `stories/<slug>/saves/`
 
 ### 6. Low-cognition helper surface
 - add one package validator script
@@ -48,5 +48,5 @@ Mode classification plus play-entry bootstrap should live in the always-loaded m
 - actual story-turn execution engine
 - richer game-package compiler/linter
 - branching route authoring helpers
-- sample playable game package
+- richer sample story packages beyond the tiny alpha smoke-test package
 - migration helpers for versioned package schema

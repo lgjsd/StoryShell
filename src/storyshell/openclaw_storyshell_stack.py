@@ -256,6 +256,17 @@ def _uses_dedicated_story_main_workspace(main_agent_mode: str) -> bool:
     return main_agent_mode in {"add", "replace"}
 
 
+def _build_skill_targets(*, openclaw_home: Path, use_dedicated_story_main: bool) -> dict[str, dict[str, Path]]:
+    targets = {
+        "main": {name: openclaw_home / "workspace" / "skills" / name for name in SKILL_SOURCES},
+    }
+    if use_dedicated_story_main:
+        targets[STORY_MAIN_AGENT_ID] = {
+            name: openclaw_home / "workspace-story-main" / "skills" / name for name in SKILL_SOURCES
+        }
+    return targets
+
+
 def sync_storyshell_stack(
     *,
     openclaw_home: str | Path = "~/.openclaw",
@@ -295,6 +306,11 @@ def sync_storyshell_stack(
     workspace_targets_report = {}
     if use_dedicated_story_main:
         workspace_targets_report[STORY_MAIN_AGENT_ID] = str(resolved_home / "workspace-story-main")
+    skill_targets = _build_skill_targets(openclaw_home=resolved_home, use_dedicated_story_main=use_dedicated_story_main)
+    skill_targets_report = {
+        workspace_id: {name: str(path) for name, path in workspace_skill_targets.items()}
+        for workspace_id, workspace_skill_targets in skill_targets.items()
+    }
 
     report: dict[str, Any] = {
         "openclawHome": str(resolved_home),
@@ -305,7 +321,7 @@ def sync_storyshell_stack(
         "storyMainId": story_main_id,
         "batchOperations": batch_operations,
         "ownedTargets": {
-            "mainSkills": {name: str(resolved_home / "workspace" / "skills" / name) for name in SKILL_SOURCES},
+            "skills": skill_targets_report,
             "workspaces": workspace_targets_report,
             "manifest": str(manifest_path),
             "wrappers": wrapper_commands,
@@ -317,23 +333,25 @@ def sync_storyshell_stack(
     if dry_run:
         return report
 
-    skill_targets = {name: resolved_home / "workspace" / "skills" / name for name in SKILL_SOURCES}
     workspace_roots = {}
     if use_dedicated_story_main:
         workspace_roots[STORY_MAIN_AGENT_ID] = resolved_home / "workspace-story-main"
 
-    copied_skills: dict[str, str] = {}
+    copied_skills: dict[str, dict[str, str]] = {}
     copied_workspaces: dict[str, list[str]] = {}
     written_wrappers: dict[str, dict[str, str]] = {}
 
-    for target_path in skill_targets.values():
-        target_path.parent.mkdir(parents=True, exist_ok=True)
+    for workspace_skill_targets in skill_targets.values():
+        for target_path in workspace_skill_targets.values():
+            target_path.parent.mkdir(parents=True, exist_ok=True)
     resolved_batch_file.parent.mkdir(parents=True, exist_ok=True)
 
-    for skill_name, source_dir in SKILL_SOURCES.items():
-        target_path = skill_targets[skill_name]
-        _copy_owned_directory(source_dir, target_path)
-        copied_skills[skill_name] = str(target_path)
+    for workspace_id, workspace_skill_targets in skill_targets.items():
+        copied_skills[workspace_id] = {}
+        for skill_name, source_dir in SKILL_SOURCES.items():
+            target_path = workspace_skill_targets[skill_name]
+            _copy_owned_directory(source_dir, target_path)
+            copied_skills[workspace_id][skill_name] = str(target_path)
 
     for agent_id, workspace_root in workspace_roots.items():
         copied_workspaces[agent_id] = _copy_workspace_template(WORKSPACE_TEMPLATES[agent_id], workspace_root)

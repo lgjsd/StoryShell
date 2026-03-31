@@ -9,6 +9,7 @@ Current scope:
 - three internal modes: author, play, state
 - three small skills: story-authoring, story-runtime, story-state
 - basic local helper scripts for package validation and run-state inspection/reset/patch
+- one tiny sample package for alpha smoke tests
 
 This repo is intentionally in scaffold phase. It aims to make the install/mode split boring before adding richer game logic.
 Mode classification plus play-entry bootstrap now live in the main StoryShell agent contract rather than in a separate routing skill.
@@ -41,6 +42,11 @@ The OpenClaw installer supports three main-agent modes:
 
 - scaffold plan: `docs/development/storyshell-scaffold-plan.md`
 - current progress checkpoint: `docs/development/agent-progress.md`
+- Linux alpha smoke test: `docs/testing/linux-alpha-smoke.md`
+
+## Sample package
+
+- repo-owned smoke-test package: `examples/alpha-smoke-package/`
 
 ## Scaffold verification
 

@@ -33,7 +33,7 @@ Before normal turn resolution in `play` mode:
 2. Resolve the run.
    - If the user explicitly asked to continue, load, restart, branch, or use a named save, obey that intent.
    - Otherwise prefer the current/most recent run when that choice is unambiguous.
-   - If there is no run yet, initialize a new run from `state/initial.json`.
+   - If there is no run yet, initialize a new run from `stories/<slug>/state/initial.json`.
 3. Load minimally.
    - Read only the manifest, current run state, active scene, and relevant canon.
    - Do not dump the entire story package into context unless needed.
@@ -43,16 +43,16 @@ Before normal turn resolution in `play` mode:
 Treat each story as one directory under `stories/<slug>/` with a strict reusable vs mutable split.
 
 Reusable canon:
-- `manifest.json`
-- `canon/world.md`
-- `canon/characters/`
-- `canon/scenes/`
-- `canon/rules/` when needed
-- `state/initial.json`
+- `stories/<slug>/manifest.json`
+- `stories/<slug>/canon/world.md`
+- `stories/<slug>/canon/characters/`
+- `stories/<slug>/canon/scenes/`
+- `stories/<slug>/canon/rules/` when needed
+- `stories/<slug>/state/initial.json`
 
 Mutable / disposable runtime data:
-- `runs/`
-- `saves/`
+- `stories/<slug>/runs/`
+- `stories/<slug>/saves/`
 
 Play mutates runs and saves, not canon.
 Authoring edits canon and initial-state defaults, not active runs.
@@ -62,5 +62,5 @@ Authoring edits canon and initial-state defaults, not active runs.
 - Use `story-authoring` for author mode, `story-runtime` for resolved play turns, and `story-state` for mutable-state operations.
 - Never treat `/state` work as in-fiction action.
 - Never rewrite canon during play.
-- Never treat `state/initial.json` as the live run file.
+- Never treat `stories/<slug>/state/initial.json` as the live run file.
 - Prefer wrappers and scripts over freeform shell improvisation.

@@ -15,14 +15,14 @@ Create or revise the smallest correct set of reusable canon files.
 - Validate the package before finishing.
 
 ## Default package shape
-- `manifest.json`
-- `canon/world.md`
-- `canon/characters/`
-- `canon/scenes/`
-- `canon/rules/` when needed
-- `state/initial.json`
-- `runs/`
-- `saves/`
+- `stories/<slug>/manifest.json`
+- `stories/<slug>/canon/world.md`
+- `stories/<slug>/canon/characters/`
+- `stories/<slug>/canon/scenes/`
+- `stories/<slug>/canon/rules/` when needed
+- `stories/<slug>/state/initial.json`
+- `stories/<slug>/runs/`
+- `stories/<slug>/saves/`
 
 ## Boundary
 - Edit canon plus default initial-state content.
