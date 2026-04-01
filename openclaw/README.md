@@ -15,6 +15,16 @@ Current scope:
 
 Use the materialization scripts deliberately:
 
+- `replace`
+  - default and primary path today
+  - replace the current main/default agent config with the StoryShell main-agent preset
+  - keep the main/default slot and the real main workspace at `workspace/`
+  - materialize StoryShell main-agent contract files into `workspace/`
+  - materialize StoryShell skills into `workspace/skills/`
+  - materialize StoryShell wrappers into `workspace/bin/`
+  - preserve the user's existing provider/model selection fields when present
+  - risk: this overrides the actual main workspace/brain rather than redirecting to a side workspace
+
 - `preserve`
   - keep the user's current main/default agent
   - install StoryShell skills into `workspace/skills/`
@@ -23,19 +33,13 @@ Use the materialization scripts deliberately:
   - do not touch provider/model choices
 
 - `add`
-  - keep everything from `preserve`
+  - secondary path; keep everything from `preserve`
   - also add exactly one dedicated `story-main` agent
   - materialize StoryShell skills, wrappers, and main-agent contract files into `workspace-story-main/`
   - do not replace the user's main/default agent
   - do not pin a provider/model for the added agent
 
-- `replace`
-  - replace the current main/default agent config with the StoryShell main-agent preset
-  - keep the main/default slot, but point it at a dedicated StoryShell workspace
-  - materialize StoryShell skills, wrappers, and main-agent contract files into `workspace-story-main/`
-  - leave provider/model selection to the user's existing OpenClaw setup
-
-The main point: StoryShell should be installable without forcing every user into the same main-agent posture or pinning one repo opinion about provider/model choice.
+The honest StoryShell contract right now is one brain on one workspace. `replace` is the supported/default behavior, and it is intentionally invasive.
 
 ## Install vs sync
 
@@ -65,11 +69,12 @@ For a bounded rehearsal, use either:
 - a stubbed `openclaw` command in tests/CI.
 
 Then inspect:
+- `<openclaw-home>/workspace/AGENTS.md` when using `replace`
 - `<openclaw-home>/workspace/skills/story-authoring/`
 - `<openclaw-home>/workspace/skills/story-runtime/`
 - `<openclaw-home>/workspace/skills/story-state/`
 - `<openclaw-home>/workspace/bin/`
-- `<openclaw-home>/workspace-story-main/skills/` when using `add` or `replace`
-- `<openclaw-home>/workspace-story-main/bin/` when using `add` or `replace`
+- `<openclaw-home>/workspace-story-main/skills/` when using `add`
+- `<openclaw-home>/workspace-story-main/bin/` when using `add`
 - `<openclaw-home>/storyshell-manifest.json`
 - `<openclaw-home>/tmp/storyshell-agent-config.batch.json`

@@ -96,7 +96,7 @@ class StoryShellStackTests(unittest.TestCase):
         self.assertIn("main", ids)
         self.assertNotIn(STORY_MAIN_AGENT_ID, ids)
         main_entry = next(entry for entry in agents if entry["id"] == "main")
-        self.assertEqual(main_entry["workspace"], "/tmp/openclaw-home/workspace-story-main")
+        self.assertEqual(main_entry["workspace"], "/tmp/openclaw-home/workspace")
         self.assertNotIn("subagents", main_entry)
         self.assertEqual(main_entry["provider"], "openai")
         self.assertEqual(main_entry["model"], "gpt-5.4")
@@ -144,7 +144,7 @@ class StoryShellStackTests(unittest.TestCase):
         agents = batch[0]["value"]
         self.assertEqual([entry["id"] for entry in agents], ["main"])
         main_entry = agents[0]
-        self.assertEqual(main_entry["workspace"], "/tmp/openclaw-home/workspace-story-main")
+        self.assertEqual(main_entry["workspace"], "/tmp/openclaw-home/workspace")
         self.assertTrue(main_entry["default"])
         self.assertNotIn("provider", main_entry)
         self.assertNotIn("model", main_entry)
@@ -171,16 +171,17 @@ class StoryShellStackTests(unittest.TestCase):
             home = Path(tmpdir)
             (home / "openclaw.json").write_text("{}\n", encoding="utf-8")
             report = sync_storyshell_stack(openclaw_home=home, dry_run=False, apply_config=False)
-            self.assertEqual(report["mainAgentMode"], "preserve")
+            self.assertEqual(report["mainAgentMode"], "replace")
             self.assertTrue((home / "storyshell-manifest.json").exists())
             self.assertTrue((home / "tmp" / "storyshell-agent-config.batch.json").exists())
+            self.assertTrue((home / "workspace" / "AGENTS.md").exists())
             self.assertTrue((home / "workspace" / "skills" / "story-authoring" / "SKILL.md").exists())
             self.assertTrue((home / "workspace" / "skills" / "story-state" / "SKILL.md").exists())
             self.assertTrue((home / "workspace" / "bin" / "storyshell-state").exists())
             self.assertFalse((home / "workspace-story-main").exists())
             batch_payload = json.loads((home / "tmp" / "storyshell-agent-config.batch.json").read_text(encoding="utf-8"))
             self.assertEqual(batch_payload[0]["path"], "agents.list")
-            self.assertEqual(batch_payload[0]["value"][0]["workspace"], "/tmp/openclaw/workspace")
+            self.assertEqual(batch_payload[0]["value"][0]["workspace"], str(home / "workspace"))
 
     @mock.patch("storyshell.openclaw_storyshell_stack.subprocess.run")
     @mock.patch("storyshell.openclaw_storyshell_stack._load_openclaw_config")
@@ -189,7 +190,12 @@ class StoryShellStackTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             home = Path(tmpdir)
             (home / "openclaw.json").write_text("{}\n", encoding="utf-8")
-            report = sync_storyshell_stack(openclaw_home=home, dry_run=False, apply_config=True)
+            report = sync_storyshell_stack(
+                openclaw_home=home,
+                dry_run=False,
+                apply_config=True,
+                main_agent_mode="preserve",
+            )
             self.assertFalse(report["configApplied"])
             self.assertTrue((home / "workspace" / "skills" / "story-authoring" / "SKILL.md").exists())
             batch_payload = json.loads((home / "tmp" / "storyshell-agent-config.batch.json").read_text(encoding="utf-8"))
@@ -217,7 +223,7 @@ class StoryShellStackTests(unittest.TestCase):
             self.assertTrue((home / "workspace-story-main" / "bin" / "storyshell-validate").exists())
 
     @mock.patch("storyshell.openclaw_storyshell_stack._load_openclaw_config")
-    def test_sync_replace_mode_materializes_dedicated_story_main_skills(self, mock_load_config: mock.Mock) -> None:
+    def test_sync_replace_mode_materializes_main_workspace_assets(self, mock_load_config: mock.Mock) -> None:
         mock_load_config.return_value = self.existing_config
         with tempfile.TemporaryDirectory() as tmpdir:
             home = Path(tmpdir)
@@ -229,11 +235,12 @@ class StoryShellStackTests(unittest.TestCase):
                 main_agent_mode="replace",
             )
             self.assertEqual(report["mainAgentMode"], "replace")
-            self.assertTrue((home / "workspace-story-main" / "AGENTS.md").exists())
-            self.assertTrue((home / "workspace-story-main" / "skills" / "story-authoring" / "SKILL.md").exists())
-            self.assertTrue((home / "workspace-story-main" / "skills" / "story-runtime" / "SKILL.md").exists())
-            self.assertTrue((home / "workspace-story-main" / "skills" / "story-state" / "SKILL.md").exists())
-            self.assertTrue((home / "workspace-story-main" / "bin" / "storyshell-state").exists())
+            self.assertTrue((home / "workspace" / "AGENTS.md").exists())
+            self.assertTrue((home / "workspace" / "skills" / "story-authoring" / "SKILL.md").exists())
+            self.assertTrue((home / "workspace" / "skills" / "story-runtime" / "SKILL.md").exists())
+            self.assertTrue((home / "workspace" / "skills" / "story-state" / "SKILL.md").exists())
+            self.assertTrue((home / "workspace" / "bin" / "storyshell-state").exists())
+            self.assertFalse((home / "workspace-story-main").exists())
 
     @mock.patch("storyshell.openclaw_storyshell_stack.subprocess.run")
     @mock.patch("storyshell.openclaw_storyshell_stack._load_openclaw_config")

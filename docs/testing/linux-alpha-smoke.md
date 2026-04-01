@@ -4,7 +4,7 @@ StoryShell is currently an OpenClaw scaffold, not a finished interactive-fiction
 This smoke test is only meant to prove:
 
 - the repo-owned StoryShell assets install into a disposable OpenClaw home
-- the dedicated StoryShell workspace is materialized correctly in `add` mode
+- the default override path materializes into the real main workspace
 - the sample package matches the current StoryShell package shape
 
 ## Assumptions
@@ -17,14 +17,19 @@ This smoke test is only meant to prove:
 
 ## Recommended install mode
 
-For external testers, use `add`.
+Use `replace` in a copied or otherwise disposable initialized OpenClaw home.
 
 Why:
-- it keeps the existing OpenClaw main/default agent posture intact
-- it adds one dedicated `story-main` agent for StoryShell
-- it materializes a dedicated `workspace-story-main/` without taking over the main slot
+- it is the honest primary/default StoryShell path right now
+- it keeps StoryShell on one brain and one workspace
+- it proves the actual supported behavior instead of a side-workspace escape hatch
 
-Avoid `replace` unless you are intentionally testing main-agent replacement behavior.
+Warning:
+- `replace` overrides the actual main OpenClaw workspace at `<openclaw-home>/workspace/`
+- it writes StoryShell root contract files into that workspace and replaces the main agent contract in place
+- do not point it at a home you are not willing to override
+
+`add` still exists in code for later development, but it is not the primary smoke-test contract.
 
 ## 1. Choose an initialized OpenClaw home
 
@@ -38,17 +43,17 @@ From the repo root, the simplest path is:
 
 ```bash
 python3 openclaw/scripts/install_storyshell_stack.py \
-  --main-agent-mode add
+  --openclaw-home "$TEST_OPENCLAW_HOME"
 ```
 
-That targets the default initialized OpenClaw home at `~/.openclaw`.
+That targets the initialized disposable/copy home you set in `TEST_OPENCLAW_HOME`.
 
-If you are deliberately testing against an alternate initialized home, run:
+If you are deliberately testing the secondary `add` path instead, run:
 
 ```bash
 python3 openclaw/scripts/install_storyshell_stack.py \
-  --openclaw-home "$TEST_OPENCLAW_HOME" \
-  --main-agent-mode add
+  --main-agent-mode add \
+  --openclaw-home "$TEST_OPENCLAW_HOME"
 ```
 
 ## 3. Inspect the installed assets
@@ -58,12 +63,8 @@ The smoke-test install is healthy if these paths exist under the OpenClaw home y
 - `<openclaw-home>/workspace/skills/story-authoring/SKILL.md`
 - `<openclaw-home>/workspace/skills/story-runtime/SKILL.md`
 - `<openclaw-home>/workspace/skills/story-state/SKILL.md`
+- `<openclaw-home>/workspace/AGENTS.md`
 - `<openclaw-home>/workspace/bin/storyshell-validate`
-- `<openclaw-home>/workspace-story-main/AGENTS.md`
-- `<openclaw-home>/workspace-story-main/skills/story-authoring/SKILL.md`
-- `<openclaw-home>/workspace-story-main/skills/story-runtime/SKILL.md`
-- `<openclaw-home>/workspace-story-main/skills/story-state/SKILL.md`
-- `<openclaw-home>/workspace-story-main/bin/storyshell-manifest`
 - `<openclaw-home>/storyshell-manifest.json`
 - `<openclaw-home>/tmp/storyshell-agent-config.batch.json`
 
@@ -87,4 +88,5 @@ The validator should resolve the single sample story under `stories/lantern-cell
 - The sample package is only a package-shape probe, not a meaningful game.
 - The state helper is still small: show, reset, and shallow patch.
 - `preserve`, `add`, and `replace` only cover install posture and workspace materialization; they do not make StoryShell production-ready.
+- the primary `replace` path is intentionally invasive because it overrides the real main workspace
 - Expect rough edges around real play loops, save workflows, and authoring ergonomics.

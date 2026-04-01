@@ -55,10 +55,11 @@ Implemented behavior:
   - `replace`
 - writes a deterministic config batch payload
 - writes a `storyshell-manifest.json`
+- defaults to `replace`
 - materializes the three specialist skills into the main workspace skill tree
 - materializes stable wrappers into the main workspace `bin/` directory
-- materializes a dedicated `story-main` workspace only when `add` or `replace` needs it
-- materializes the three specialist skills into that dedicated workspace when `add` or `replace` is used
+- materializes the StoryShell main-agent contract files into the real main workspace when using `replace`
+- materializes a dedicated `story-main` workspace only when `add` is used
 
 The main design choice here is already in place: install posture is explicit, instead of forcing one global replacement policy on every OpenClaw home.
 
@@ -107,7 +108,7 @@ There is now a focused stack test file at:
 It currently checks:
 - `preserve` mode keeps the existing main agent unchanged
 - `add` mode adds exactly one dedicated `story-main`
-- `replace` mode reuses the main slot while pointing it at the StoryShell workspace
+- `replace` mode reuses the main slot while keeping it on the actual main workspace
 - sync/materialization writes the expected manifest, batch payload, skills, and wrappers without creating unused worker workspaces
 
 ## Validation performed at this checkpoint
@@ -131,7 +132,7 @@ What that confirmed in practice:
 - the sync path can materialize the StoryShell assets into an OpenClaw home
 - `preserve` mode leaves the existing main-agent config intact
 - the manifest and wrapper scripts are written where expected
-- the dedicated `story-main` workspace is no longer created unless a mode needs it
+- the dedicated `story-main` workspace is only created for `add`
 
 So the scaffold is not only statically present; its installation path has been exercised in a bounded rehearsal.
 

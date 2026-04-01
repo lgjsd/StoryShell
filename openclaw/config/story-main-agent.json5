@@ -1,6 +1,6 @@
 {
   "id": "story-main",
-  "workspace": "__OPENCLAW_HOME__/workspace-story-main",
+  "workspace": "__OPENCLAW_HOME__/workspace",
   "tools": {
     "allow": [
       "read",

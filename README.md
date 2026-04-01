@@ -29,11 +29,13 @@ It is not yet suitable for claiming polished gameplay, production readiness, or 
 
 The OpenClaw installer currently supports three main-agent modes:
 
-- `preserve` — keep the user's current main agent and install StoryShell assets into the main workspace
-- `add` — keep the user's current main agent and also add one dedicated `story-main` agent
-- `replace` — replace the current main/default agent config with the StoryShell main-agent preset while keeping the main/default slot
+- `replace` — default; replace the current main/default agent config with the StoryShell main-agent preset while keeping the main/default slot and the real main workspace at `<openclaw-home>/workspace`
+- `preserve` — keep the user's current main agent and install StoryShell skills/wrappers into the main workspace without taking over the main agent contract
+- `add` — keep the user's current main agent and also add one dedicated `story-main` agent on `workspace-story-main`
 
-For outside testers, `add` is the safest default because it avoids taking over an existing main agent. StoryShell assumes users already manage their own provider/model setup; it does not pin one for them.
+StoryShell's honest primary path right now is one brain on one workspace: `replace` overrides your actual main OpenClaw workspace and main agent.
+
+Warning: `replace` writes StoryShell root contract files into `<openclaw-home>/workspace/` and reuses the real `main` slot. Do not run it against a workspace/brain you are not willing to override. Use a copied or disposable initialized OpenClaw home if you need safety. StoryShell assumes users already manage their own provider/model setup; it does not pin one for them.
 
 ## Quick start
 
@@ -41,17 +43,19 @@ Assumptions:
 - OpenClaw is already installed
 - Node is already installed
 - Python 3 is available as `python3`
-- your default OpenClaw home at `~/.openclaw` is already initialized and has whatever provider/model setup you intend to use
+- you have an already initialized OpenClaw home, ideally a copied/disposable one for override testing
 
-Clone the repo and install StoryShell into your existing initialized OpenClaw home (the default is `~/.openclaw`):
+Clone the repo and install StoryShell into an initialized OpenClaw home:
 
 ```bash
 git clone <repo-url>
 cd StoryShell
 
 python3 openclaw/scripts/install_storyshell_stack.py \
-  --main-agent-mode add
+  --openclaw-home "$TEST_OPENCLAW_HOME"
 ```
+
+If you really want the non-default add-on path, pass `--main-agent-mode add`, but that path is currently secondary to the override install and should be treated as deferred/less-proved behavior.
 
 Then validate the sample package:
 
@@ -70,12 +74,12 @@ For the fuller smoke-test checklist, see:
 
 The current practical way to start is:
 1. install StoryShell into your existing initialized OpenClaw home
-2. use `add` mode so your normal main agent stays untouched
-3. verify the installed StoryShell assets exist
+2. preferably use a copied or disposable initialized OpenClaw home, because the default path overrides the real main workspace
+3. verify the installed StoryShell assets exist in `<openclaw-home>/workspace/`
 4. validate the included sample package
 5. report setup friction, install surprises, and contract mismatches
 
-That is the honest current surface. The repo is proving install shape and package shape first; richer play loops come later.
+That is the honest current surface. The repo is proving install shape and package shape first, and the supported posture is a single StoryShell brain running from the actual main workspace.
 
 ## Repository layout
 
@@ -106,3 +110,4 @@ python3 -m unittest tests.test_openclaw_storyshell_stack -v
 - the sample package is only a smoke-test package, not a meaningful game
 - the current state helper is still small: show, reset, and shallow patch
 - install modes prove posture and materialization, not production readiness
+- the default install path is intentionally risky because it overrides the real main workspace

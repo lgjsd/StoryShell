@@ -28,10 +28,11 @@ Mode classification plus play-entry bootstrap should live in the always-loaded m
 - write a manifest and deterministic config batch payload
 
 ### 4. Override policy
-- default install mode: `preserve`
-- optional modes: `add`, `replace`
+- default install mode: `replace`
+- optional secondary modes: `preserve`, `add`
 - `preserve` should install StoryShell skills/wrappers into the user's main workspace without adding worker agents
-- avoid overwriting the user's existing workspace files when replacing the main agent; use a dedicated StoryShell workspace instead
+- `replace` should override the real main workspace/brain in place rather than redirecting `main` to a side workspace
+- keep `add` available as a later secondary path with a dedicated StoryShell workspace
 
 ### 5. Story package shape
 - each story lives under `stories/<slug>/`

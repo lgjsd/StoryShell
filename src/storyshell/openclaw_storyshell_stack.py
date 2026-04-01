@@ -101,6 +101,12 @@ def _copy_workspace_template(source_root: Path, target_root: Path) -> list[str]:
     return copied_files
 
 
+def _workspace_template_for_materialized_agent(agent_id: str) -> Path:
+    if agent_id == "main":
+        return WORKSPACE_TEMPLATES[STORY_MAIN_AGENT_ID]
+    return WORKSPACE_TEMPLATES[agent_id]
+
+
 def _write_materialized_file(target_path: Path, *, content: str, executable: bool = False) -> str:
     target_path.parent.mkdir(parents=True, exist_ok=True)
     target_path.write_text(content, encoding="utf-8")
@@ -192,7 +198,7 @@ def build_storyshell_agent_batch(
     *,
     existing_config: Mapping[str, Any],
     openclaw_home: str | Path,
-    main_agent_mode: str = "preserve",
+    main_agent_mode: str = "replace",
     story_main_id: str = STORY_MAIN_AGENT_ID,
 ) -> list[dict[str, Any]]:
     if main_agent_mode not in VALID_MAIN_AGENT_MODES:
@@ -215,6 +221,7 @@ def build_storyshell_agent_batch(
         story_main = load_agent_snippet(STORY_MAIN_AGENT_ID, openclaw_home=openclaw_home)
         story_main["id"] = story_main_id
         story_main["default"] = False
+        story_main["workspace"] = str(Path(openclaw_home).expanduser().resolve() / "workspace-story-main")
         _upsert_agent(merged_agents, story_main)
     elif main_agent_mode == "replace":
         replacement = load_agent_snippet(STORY_MAIN_AGENT_ID, openclaw_home=openclaw_home)
@@ -279,7 +286,7 @@ def _materialize_wrapper_group(wrapper_dir: Path, wrapper_scripts: Mapping[str, 
 
 
 def _uses_dedicated_story_main_workspace(main_agent_mode: str) -> bool:
-    return main_agent_mode in {"add", "replace"}
+    return main_agent_mode == "add"
 
 
 def _build_skill_targets(*, openclaw_home: Path, use_dedicated_story_main: bool) -> dict[str, dict[str, Path]]:
@@ -379,7 +386,7 @@ def sync_storyshell_stack(
     apply_config: bool = False,
     openclaw_command: str = "openclaw",
     dry_run: bool = False,
-    main_agent_mode: str = "preserve",
+    main_agent_mode: str = "replace",
     story_main_id: str = STORY_MAIN_AGENT_ID,
 ) -> dict[str, Any]:
     resolved_home = Path(openclaw_home).expanduser().resolve()
@@ -409,6 +416,8 @@ def sync_storyshell_stack(
         for key, path in workspace_targets.items()
     }
     workspace_targets_report = {}
+    if main_agent_mode == "replace":
+        workspace_targets_report["main"] = str(resolved_home / "workspace")
     if use_dedicated_story_main:
         workspace_targets_report[STORY_MAIN_AGENT_ID] = str(resolved_home / "workspace-story-main")
     skill_targets = _build_skill_targets(openclaw_home=resolved_home, use_dedicated_story_main=use_dedicated_story_main)
@@ -439,6 +448,8 @@ def sync_storyshell_stack(
         return report
 
     workspace_roots = {}
+    if main_agent_mode == "replace":
+        workspace_roots["main"] = resolved_home / "workspace"
     if use_dedicated_story_main:
         workspace_roots[STORY_MAIN_AGENT_ID] = resolved_home / "workspace-story-main"
 
@@ -459,7 +470,10 @@ def sync_storyshell_stack(
             copied_skills[workspace_id][skill_name] = str(target_path)
 
     for agent_id, workspace_root in workspace_roots.items():
-        copied_workspaces[agent_id] = _copy_workspace_template(WORKSPACE_TEMPLATES[agent_id], workspace_root)
+        copied_workspaces[agent_id] = _copy_workspace_template(
+            _workspace_template_for_materialized_agent(agent_id),
+            workspace_root,
+        )
 
     wrapper_payload = _build_wrapper_scripts(
         python_interpreter=Path(sys.executable).resolve(),
@@ -515,7 +529,7 @@ def _build_parser(*, install_mode: bool) -> argparse.ArgumentParser:
     parser.add_argument("--dry-run", action="store_true", help="Plan file/config changes without copying files or applying config.")
     parser.add_argument(
         "--main-agent-mode",
-        default="preserve",
+        default="replace",
         choices=sorted(VALID_MAIN_AGENT_MODES),
         help="How to handle the user's main/default agent.",
     )
