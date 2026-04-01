@@ -122,15 +122,33 @@ class StoryShellStackTests(unittest.TestCase):
         self.assertEqual(ids.count("main"), 1)
         self.assertEqual(ids.count(STORY_MAIN_AGENT_ID), 1)
         main_entry = next(entry for entry in agents if entry["id"] == "main")
+        self.assertEqual(main_entry["id"], "main")
+        self.assertTrue(main_entry["default"])
         self.assertEqual(main_entry["workspace"], "/tmp/openclaw/workspace")
-        self.assertEqual(main_entry["provider"], "openai")
-        self.assertEqual(main_entry["model"], "gpt-5.4")
-        self.assertEqual(main_entry["thinkingDefault"], "medium")
+        self.assertNotIn("provider", main_entry)
+        self.assertNotIn("model", main_entry)
+        self.assertNotIn("thinkingDefault", main_entry)
         story_main = next(entry for entry in agents if entry["id"] == STORY_MAIN_AGENT_ID)
         self.assertFalse(story_main["default"])
         self.assertNotIn("provider", story_main)
         self.assertNotIn("model", story_main)
         self.assertNotIn("thinkingDefault", story_main)
+
+    def test_replace_mode_does_not_copy_defaults_only_model_settings(self) -> None:
+        batch = build_storyshell_agent_batch(
+            existing_config=self.defaults_only_config,
+            openclaw_home="/tmp/openclaw-home",
+            main_agent_mode="replace",
+        )
+        self.assertEqual(batch[0]["path"], "agents.list")
+        agents = batch[0]["value"]
+        self.assertEqual([entry["id"] for entry in agents], ["main"])
+        main_entry = agents[0]
+        self.assertEqual(main_entry["workspace"], "/tmp/openclaw-home/workspace-story-main")
+        self.assertTrue(main_entry["default"])
+        self.assertNotIn("provider", main_entry)
+        self.assertNotIn("model", main_entry)
+        self.assertNotIn("thinkingDefault", main_entry)
 
     @mock.patch("storyshell.openclaw_storyshell_stack.subprocess.run")
     def test_load_openclaw_config_reads_agents_subtree(self, mock_run: mock.Mock) -> None:

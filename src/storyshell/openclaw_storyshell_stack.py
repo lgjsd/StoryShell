@@ -171,12 +171,11 @@ def _preserve_agent_choice_fields(source: Mapping[str, Any], target: dict[str, A
 
 def _synthesize_implicit_main_agent(agents: Mapping[str, Any]) -> dict[str, Any]:
     defaults = _require_mapping(agents.get("defaults"), path="openclawConfig.agents.defaults")
-    implicit_main = {
+    return {
         "id": "main",
         "default": True,
         "workspace": _require_string(defaults.get("workspace"), path="openclawConfig.agents.defaults.workspace"),
     }
-    return _preserve_agent_choice_fields(defaults, implicit_main)
 
 
 def _load_agents_for_merge(agents: Mapping[str, Any]) -> tuple[list[dict[str, Any]], bool]:
